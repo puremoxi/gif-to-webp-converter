@@ -1,11 +1,10 @@
 {
-  "name": "gif-to-webp-converter",
-  "version": "1.1.0",
+  "name": "gif-to-webp-converter-pro",
+  "version": "1.0.0",
   "private": true,
-  "description": "Browser-only GIF to WebP converter with per-file progress and advanced settings (FFmpeg WASM)",
+  "description": "Local GIF \u2192 WebP converter with progress, thumbnails, metadata, ZIP download.",
   "scripts": {
-    "serve": "serve .",
-    "start": "serve ."
-  },
-  "license": "MIT"
+    "start": "npx serve .",
+    "serve": "npx serve ."
+  }
 }

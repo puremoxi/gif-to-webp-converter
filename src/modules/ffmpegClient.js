@@ -1,166 +1,127 @@
-import { perFrameMix } from "./perFrameMixer.js";
 // src/modules/ffmpegClient.js
-let ffmpegInstance;
-let fetchFileFunc;
+let ffmpegInstance = null;
+const FFmpegClass = () => window?.FFmpeg?.FFmpeg;
+const fetchFileUtil = (f) => window?.FFmpegUtil?.fetchFile?.(f);
 
-export async function initFFmpeg() {
-  if (ffmpegInstance) return ffmpegInstance;
+async function fetchWithProgress(url, onPct){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`Fetch failed: ${r.status} ${r.statusText}`);
+  const total = Number(r.headers.get('content-length')) || 0;
+  if(!r.body || !r.body.getReader || !total){
+    const blob = await r.blob();
+    onPct && onPct(100);
+    return blob;
+  }
+  const reader = r.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    onPct && onPct((loaded/total)*100);
+  }
+  return new Blob(chunks, { type: r.headers.get('content-type') || 'application/octet-stream' });
+}
 
-  if (!window.FFmpeg) {
-    throw new Error("FFmpeg library not found. Ensure @ffmpeg/ffmpeg UMD is loaded in index.html");
+export async function initFFmpeg(opts={}){
+  if(ffmpegInstance) return ffmpegInstance;
+  const FF = FFmpegClass();
+  if(!FF) throw new Error("FFmpeg library not available");
+
+  const ffmpeg = new FF();
+
+  const coreBase = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+  const urls = [
+    { label: "core loader", url: `${coreBase}/ffmpeg-core.js` },
+    { label: "engine (wasm)", url: `${coreBase}/ffmpeg-core.wasm` },
+    { label: "worker", url: `${coreBase}/ffmpeg-core.worker.js` }
+  ];
+
+  try{ opts.onStart && opts.onStart("Downloading converter engine…"); }catch{}
+  try{ opts.onProgress && opts.onProgress(0); }catch{}
+
+  const blobs = [];
+  for(let i=0;i<urls.length;i++){
+    const {label, url} = urls[i];
+    try{ opts.onFileStep && opts.onFileStep(i+1, urls.length, label); }catch{}
+    const blob = await fetchWithProgress(url, (pct)=>{
+      const base = (i/urls.length)*100;
+      const totalPct = Math.min(100, Math.round(base + pct/urls.length));
+      try{ opts.onProgress && opts.onProgress(totalPct); }catch{}
+    });
+    blobs.push(blob);
   }
 
-  const createFFmpeg = window.FFmpeg.createFFmpeg;
-  // Try both namespaced locations for fetchFile (varies by UMD build)
-  fetchFileFunc = window.FFmpeg?.FFmpegUtil?.fetchFile || window.FFmpegUtil?.fetchFile;
-  if (!fetchFileFunc) {
-    throw new Error("fetchFile not found. Ensure @ffmpeg/util UMD is available via the FFmpeg bundle.");
+  const [jsBlob, wasmBlob, workerBlob] = blobs;
+  const coreURL   = URL.createObjectURL(jsBlob);
+  const wasmURL   = URL.createObjectURL(wasmBlob);
+  const workerURL = URL.createObjectURL(workerBlob);
+
+  try{
+    await ffmpeg.load({ coreURL, wasmURL, workerURL });
+    try{ opts.onStatus && opts.onStatus("Converter ready."); }catch{}
+  } finally {
+    try{ opts.onProgress && opts.onProgress(100); }catch{}
+    try{ opts.onDone && opts.onDone(); }catch{}
+    URL.revokeObjectURL(coreURL);
+    URL.revokeObjectURL(wasmURL);
+    URL.revokeObjectURL(workerURL);
   }
 
-  const ffmpeg = createFFmpeg({
-    log: true,
-    corePath: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
-  });
-
-  ffmpeg.on("log", ({ message }) => console.debug("[ffmpeg]", message));
-
-  await ffmpeg.load();
   ffmpegInstance = ffmpeg;
-
-  console.log("✅ FFmpeg loaded and ready.");
   return ffmpegInstance;
 }
 
-/**
- * Convert to WebP with *smoothed* per-file progress and extended settings:
- * - seed progress to 5% after writeFile()
- * - during encode, map raw ratio [0..1] to [0.05..0.99]
- * - set to 100% after success
- * - compression level (0..6)
- * - loop toggle (checked => loop 0 infinite; unchecked => loop -1 no loop)
- * - preset picture when 'still image' checked
- */
-export async function _convertToWebPSingle(ffmpeg, file, settings, onProgress) {
+export async function generateThumbnail(ffmpeg, file, maxWidth=256){
+  if(!ffmpeg || !ffmpeg.loaded) throw new Error("ffmpeg not ready");
   const inputName = file.name;
-  const baseName = inputName.replace(/\.gif$/i, "");
-  const outputName = baseName + ".webp";
+  const thumbName = inputName.replace(/\.gif$/i, "_thumb.png");
 
-  await ffmpeg.writeFile(inputName, await fetchFileFunc(file));
+  let wrote=false;
+  try{ await ffmpeg.readFile(inputName); }
+  catch{ await ffmpeg.writeFile(inputName, await fetchFileUtil(file)); wrote=true; }
 
-  const smooth = (r) => {
-    const mapped = 0.05 + (Math.max(0, Math.min(1, r)) * 0.94);
-    return Math.max(0.05, Math.min(0.99, mapped));
-  };
-  const emit = (v) => { try { onProgress && onProgress(v); } catch {} };
+  const vf = `thumbnail,scale=${maxWidth}:-1:flags=lanczos`;
+  await ffmpeg.exec(["-i", inputName, "-vf", vf, "-frames:v", "1", thumbName]);
+  const data = await ffmpeg.readFile(thumbName);
+  try{ await ffmpeg.deleteFile(thumbName);}catch{}
+  if(wrote){ try{ await ffmpeg.deleteFile(inputName);}catch{} }
 
-  // Seed visible start
-  emit(0.05);
-
-  // Helper to build args common to both passes
-  const commonArgs = (outName, losslessFlag) => {
-    const args = ["-i", inputName, "-c:v", "libwebp"];
-
-    // compression level
-    if (Number.isFinite(settings.compressionLevel)) {
-      args.push("-compression_level", String(settings.compressionLevel));
-    }
-
-    if (losslessFlag) {
-      args.push("-lossless", "1");
-    } else {
-      args.push("-qscale", String(settings.quality));
-    }
-
-    // loop handling
-    const loopValue = settings.loop ? "0" : "-1";
-    args.push("-loop", loopValue);
-
-    // still image preset
-    if (settings.still) args.push("-preset", "picture");
-
-    args.push(outName);
-    return args;
-  };
-
-  if (settings.mixed) {
-    // Pass 1: lossy
-    const lossyOut = baseName + "_lossy.webp";
-    const handler1 = ({ ratio }) => emit(0.05 + (smooth(ratio) - 0.05) * 0.45); // up to ~50%
-    if (onProgress) ffmpeg.on("progress", handler1);
-    try {
-      await ffmpeg.exec(commonArgs(lossyOut, false));
-    } finally {
-      if (onProgress) try { ffmpeg.off("progress", handler1); } catch {}
-    }
-
-    // Pass 2: lossless
-    const losslessOut = baseName + "_lossless.webp";
-    const handler2 = ({ ratio }) => emit(0.50 + (smooth(ratio) - 0.05) * 0.49); // 50..~99%
-    if (onProgress) ffmpeg.on("progress", handler2);
-    try {
-      await ffmpeg.exec(commonArgs(losslessOut, true));
-    } finally {
-      if (onProgress) try { ffmpeg.off("progress", handler2); } catch {}
-    }
-
-    // Read both, pick better heuristic (currently size-only)
-    const lossyData = await ffmpeg.readFile(lossyOut);
-    const losslessData = await ffmpeg.readFile(losslessOut);
-
-    // finalize to 100%
-    emit(1);
-
-    // clean up
-    try { await ffmpeg.deleteFile(inputName); } catch {}
-    try { await ffmpeg.deleteFile(lossyOut); } catch {}
-    try { await ffmpeg.deleteFile(losslessOut); } catch {}
-
-    // Choose smaller output (you can refine with SSIM/PSNR scoring offline)
-    const pickLossy = lossyData.byteLength <= losslessData.byteLength;
-    const data = pickLossy ? lossyData : losslessData;
-    const blob = new Blob([data.buffer], { type: "image/webp" });
-    return { name: outputName, blob };
-  } else {
-    // Single-pass (lossy or lossless)
-    const args = commonArgs(outputName, !!settings.lossless);
-    const handler = ({ ratio }) => emit(smooth(ratio));
-    if (onProgress) ffmpeg.on("progress", handler);
-    try {
-      await ffmpeg.exec(args);
-    } finally {
-      if (onProgress) try { ffmpeg.off("progress", handler); } catch {}
-    }
-
-    const data = await ffmpeg.readFile(outputName);
-    emit(1);
-
-    try { await ffmpeg.deleteFile(inputName); } catch {}
-    try { await ffmpeg.deleteFile(outputName); } catch {}
-
-    const blob = new Blob([data.buffer], { type: "image/webp" });
-    return { name: outputName, blob };
-  }
+  return new Blob([data.buffer], { type: "image/png" });
 }
 
+export async function convertToWebP(ffmpeg, file, settings, onProgress){
+  const input = file.name;
+  const base = input.replace(/\.gif$/i, "");
+  const output = base + ".webp";
 
-// Wrapper that attempts per-frame mixing if settings.mixed is true and WebPMux is available.
-export async function convertToWebP(ffmpeg, file, settings, onProgress) {
-  // If mixed mode requested, try per-frame approach first.
-  if (settings && settings.mixed) {
-    try {
-      const inputName = file.name;
-      await ffmpeg.writeFile(inputName, await fetchFileFunc(file));
-      const blob = await perFrameMix(ffmpeg, inputName, settings, onProgress);
-      if (blob) {
-        // Success; clean input
-        try { await ffmpeg.deleteFile(inputName); } catch {}
-        return { name: inputName.replace(/\.gif$/i, ".webp"), blob };
-      }
-      // If per-frame mix fails or mux not present, fall through to single-pass fallback.
-    } catch (e) {
-      console.warn("Per-frame mixing failed or unavailable; falling back to single-pass.", e);
-    }
-  }
-  // Fallback to the existing single/two-pass behavior
-  return _convertToWebPSingle(ffmpeg, file, settings, onProgress);
+  await ffmpeg.writeFile(input, await fetchFileUtil(file));
+
+  const smooth = (r)=>Math.max(0.05, Math.min(0.99, 0.05 + r*0.94));
+  const emit = (v)=>{ try{ onProgress && onProgress(v);}catch{} };
+  emit(0.05);
+
+  const args = ["-i", input, "-c:v", "libwebp"];
+  if(Number.isFinite(settings.compressionLevel)) args.push("-compression_level", String(settings.compressionLevel));
+  if(settings.lossless){ args.push("-lossless","1"); } else { args.push("-qscale", String(settings.quality)); }
+  const loopValue = settings.loop ? "0" : "-1";
+  args.push("-loop", loopValue);
+  if(settings.still) args.push("-preset", "picture");
+  args.push(output);
+
+  const h = ({progress})=>emit(smooth(progress));
+  ffmpeg.on("progress", h);
+  try{ await ffmpeg.exec(args); }
+  finally{ try{ ffmpeg.off("progress", h);}catch{} }
+
+  const data = await ffmpeg.readFile(output);
+  emit(1);
+
+  try{ await ffmpeg.deleteFile(input);}catch{}
+  try{ await ffmpeg.deleteFile(output);}catch{}
+
+  const blob = new Blob([data.buffer], { type: "image/webp" });
+  return { name: output, blob };
 }
