@@ -5,7 +5,11 @@ const DEFAULTS = {
   quality: 90,
   compressionLevel: 6,
   loop: true,
-  still: false
+  still: false,
+  mixed: false,
+  mixedMode: 'percent',
+  mixedPercent: 20,
+  mixedThreshold: 80
 };
 
 export function setupUI(dropzone, fileInput) {
@@ -16,6 +20,12 @@ export function setupUI(dropzone, fileInput) {
   const compValue = document.getElementById("compression-level-value");
 
   const resetBtn = document.getElementById("reset-settings");
+
+  const mixedMode = document.getElementById("mixed-mode");
+  const mixedPercent = document.getElementById("mixed-percent");
+  const mixedPercentValue = document.getElementById("mixed-percent-value");
+  const mixedThreshold = document.getElementById("mixed-threshold");
+  const mixedThresholdValue = document.getElementById("mixed-threshold-value");
 
   // Update quality text live and clamp
   qualitySlider.addEventListener("input", () => {
@@ -31,6 +41,18 @@ export function setupUI(dropzone, fileInput) {
     compValue.textContent = v;
   });
 
+  // Mixed tuning updates
+  mixedPercent.addEventListener("input", () => {
+    let v = clamp(parseInt(mixedPercent.value, 10), 10, 50);
+    mixedPercent.value = v;
+    mixedPercentValue.textContent = v + "%";
+  });
+  mixedThreshold.addEventListener("input", () => {
+    let v = clamp(parseInt(mixedThreshold.value, 10), 50, 99);
+    mixedThreshold.value = v;
+    mixedThresholdValue.textContent = v + "th";
+  });
+
   // Reset to defaults
   resetBtn.addEventListener("click", () => {
     document.getElementById("lossless-toggle").checked = DEFAULTS.lossless;
@@ -40,6 +62,47 @@ export function setupUI(dropzone, fileInput) {
     compValue.textContent = DEFAULTS.compressionLevel;
     document.getElementById("loop-toggle").checked = DEFAULTS.loop;
     document.getElementById("still-toggle").checked = DEFAULTS.still;
+    document.getElementById("mixed-toggle").checked = DEFAULTS.mixed;
+    mixedMode.value = DEFAULTS.mixedMode;
+    mixedPercent.value = DEFAULTS.mixedPercent;
+    mixedPercentValue.textContent = DEFAULTS.mixedPercent + "%";
+    mixedThreshold.value = DEFAULTS.mixedThreshold;
+    mixedThresholdValue.textContent = DEFAULTS.mixedThreshold + "th";
+  });
+
+  // Basic drag events
+  ["dragenter", "dragover"].forEach((ev) =>
+    dropzone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = "#3b82f6";
+    })
+  );
+
+  ["dragleave", "drop"].forEach((ev) =>
+    dropzone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = "#475569";
+    })
+  );
+});
+
+  // Update compression level text live and clamp
+  compSlider.addEventListener("input", () => {
+    let v = clamp(parseInt(compSlider.value, 10), 0, 6);
+    compSlider.value = v;
+    compValue.textContent = v;
+  });
+
+  // Reset to defaults
+  resetBtn.addEventListener("click", () => {
+    document.getElementById("lossless-toggle").checked = DEFAULTS.lossless;
+    document.getElementById("quality").value = DEFAULTS.quality;
+    document.getElementById("quality-value").textContent = DEFAULTS.quality;
+    document.getElementById("compression-level").value = DEFAULTS.compressionLevel;
+    document.getElementById("compression-level-value").textContent = DEFAULTS.compressionLevel;
+    document.getElementById("loop-toggle").checked = DEFAULTS.loop;
+    document.getElementById("still-toggle").checked = DEFAULTS.still;
+    document.getElementById("mixed-toggle").checked = DEFAULTS.mixed;
   });
 
   // Basic drag events
@@ -68,7 +131,11 @@ export function getSettings() {
     quality,
     compressionLevel,
     loop: document.getElementById("loop-toggle").checked,
-    still: document.getElementById("still-toggle").checked
+    still: document.getElementById("still-toggle").checked,
+    mixed: document.getElementById("mixed-toggle").checked,
+    mixedMode: document.getElementById("mixed-mode").value,
+    mixedPercent: clamp(parseInt(document.getElementById("mixed-percent").value, 10), 10, 50),
+    mixedThreshold: clamp(parseInt(document.getElementById("mixed-threshold").value, 10), 50, 99)
   };
 }
 
