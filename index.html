@@ -81,12 +81,13 @@
   </div>
 
   
+
 <!-- Settings under dropzone -->
   <div id="settings-panel">
     <details>
       <summary style="cursor:pointer; font-weight:600;">Advanced</summary>
       <div style="margin-top:14px; display:flex; flex-direction:column; gap:12px;">
-
+        
         <label for="quality" title="0..100 where higher = better quality (larger files). Ignored if Lossless is enabled.">
           WebP Quality
           <br />
@@ -96,12 +97,15 @@
         </label>
 
         <label for="compression-level" title="Sets -compression_level (0..6). 6 = best compression (smallest) but slowest.">
-          Compression Level (higher = more; higher = longer processing time)
+          Compression Level
           <br />
           <input id="compression-level" type="range" min="0" max="6" value="6" title="Drag to set compression level (0..6; higher = smaller but slower)" />
           <span id="compression-level-value">6</span>
-          <div class="hint">libwebp: 0 (fastest) … 6 (best compression)</div>
+          <div class="hint">0 (fastest) -> 6 (best compression)</div>
         </label>
+
+        <!-- separator line between sliders and checkboxes -->
+        <div style="height:1px; background:#1f2937; margin:6px 0;"></div>
 
         <label title="When checked, uses -loop 0 (infinite). Uncheck for -loop -1 (no loop).">
           <input type="checkbox" id="loop-toggle" checked />
@@ -126,6 +130,7 @@
   </div>
 
   <div id="results">
+
 </div>
 
   <div style="display:flex; gap:10px; width:720px; max-width:94%; justify-content:flex-start;">
