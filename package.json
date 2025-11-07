@@ -1,0 +1,20 @@
+{
+  "name": "gif-to-webp-converter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-only GIF to WebP converter using FFmpeg WASM (local processing)",
+  "scripts": {
+    "serve": "serve .",
+    "start": "serve ."
+  },
+  "devDependencies": {},
+  "keywords": [
+    "ffmpeg",
+    "wasm",
+    "webp",
+    "gif",
+    "client-side",
+    "conversion"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GIF → WebP Converter</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 { margin-top: 28px; font-weight: 700; }
+    #dropzone {
+      margin-top: 20px;
+      width: 720px;
+      max-width: 94%;
+      border: 2px dashed #475569;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      background: #111827;
+    }
+    #dropzone:hover { border-color: #3b82f6; }
+    #settings-panel {
+      margin-top: 18px;
+      padding: 14px;
+      width: 720px;
+      max-width: 94%;
+      border-radius: 12px;
+      background: #111827;
+      border: 1px solid #1f2937;
+    }
+    #results {
+      width: 720px;
+      max-width: 94%;
+      margin: 24px 0 80px;
+    }
+    .card {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      background: #0b1220;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #3b82f6;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button.secondary { background: #334155; }
+    button:disabled { background: #475569; cursor: default; }
+    .hint { color: #94a3b8; font-size: 14px; }
+  </style>
+
+  <!-- FFmpeg UMD -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <!-- We let ffmpeg load its core via corePath (wasm/worker are auto-resolved) -->
+
+  <!-- JSZip UMD (global window.JSZip) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+
+<body>
+  <h1>GIF → WebP Converter</h1>
+  <div class="hint">All processing runs locally in your browser. Files are never uploaded.</div>
+
+  <div id="dropzone">
+    <p>Drag & drop GIFs here or click to choose files</p>
+    <input id="file-input" type="file" accept="image/gif" multiple style="display:none" />
+  </div>
+
+  <!-- Settings under dropzone -->
+  <div id="settings-panel">
+    <label>
+      <input type="checkbox" id="lossless-toggle" />
+      Lossless compression
+    </label>
+
+    <br /><br />
+
+    <label for="quality">WebP Quality</label>
+    <input id="quality" type="range" min="0" max="100" value="90" />
+    <span id="quality-value">90</span>
+    <div class="hint">Lossless ignores the quality slider.</div>
+  </div>
+
+  <div id="results"></div>
+
+  <div style="display:flex; gap:10px; width:720px; max-width:94%; justify-content:flex-start;">
+    <button id="download-all" class="secondary" disabled>Download All Converted Files (ZIP)</button>
+  </div>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
