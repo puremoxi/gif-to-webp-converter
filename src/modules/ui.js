@@ -1,12 +1,45 @@
 // src/modules/ui.js
 
+const DEFAULTS = {
+  lossless: false,
+  quality: 90,
+  compressionLevel: 6,
+  loop: true,
+  still: false
+};
+
 export function setupUI(dropzone, fileInput) {
   const qualitySlider = document.getElementById("quality");
   const qualityValue = document.getElementById("quality-value");
 
-  // Update quality text live
+  const compSlider = document.getElementById("compression-level");
+  const compValue = document.getElementById("compression-level-value");
+
+  const resetBtn = document.getElementById("reset-settings");
+
+  // Update quality text live and clamp
   qualitySlider.addEventListener("input", () => {
-    qualityValue.textContent = qualitySlider.value;
+    let v = clamp(parseInt(qualitySlider.value, 10), 0, 100);
+    qualitySlider.value = v;
+    qualityValue.textContent = v;
+  });
+
+  // Update compression level text live and clamp
+  compSlider.addEventListener("input", () => {
+    let v = clamp(parseInt(compSlider.value, 10), 0, 6);
+    compSlider.value = v;
+    compValue.textContent = v;
+  });
+
+  // Reset to defaults
+  resetBtn.addEventListener("click", () => {
+    document.getElementById("lossless-toggle").checked = DEFAULTS.lossless;
+    qualitySlider.value = DEFAULTS.quality;
+    qualityValue.textContent = DEFAULTS.quality;
+    compSlider.value = DEFAULTS.compressionLevel;
+    compValue.textContent = DEFAULTS.compressionLevel;
+    document.getElementById("loop-toggle").checked = DEFAULTS.loop;
+    document.getElementById("still-toggle").checked = DEFAULTS.still;
   });
 
   // Basic drag events
@@ -26,9 +59,16 @@ export function setupUI(dropzone, fileInput) {
 }
 
 export function getSettings() {
+  // Clamp values as a final guard
+  const quality = clamp(parseInt(document.getElementById("quality").value, 10), 0, 100);
+  const compressionLevel = clamp(parseInt(document.getElementById("compression-level").value, 10), 0, 6);
+
   return {
     lossless: document.getElementById("lossless-toggle").checked,
-    quality: parseInt(document.getElementById("quality").value, 10),
+    quality,
+    compressionLevel,
+    loop: document.getElementById("loop-toggle").checked,
+    still: document.getElementById("still-toggle").checked
   };
 }
 
@@ -45,6 +85,11 @@ export function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 }
 
+function clamp(n, min, max) {
+  if (Number.isNaN(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
+
 /* ---------- Per-file rows + progress ---------- */
 
 export function addQueuedItem(id, name, sizeBytes) {
@@ -57,17 +102,17 @@ export function addQueuedItem(id, name, sizeBytes) {
   card.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
       <div style="min-width:200px;">
-        <div style="font-weight:600;">${name}</div>
-        <div style="color:#94a3b8; font-size:14px;">${formatBytes(sizeBytes)}</div>
+        <div style="font-weight:600;">\${name}</div>
+        <div style="color:#94a3b8; font-size:14px;">\${formatBytes(sizeBytes)}</div>
       </div>
-      <div id="status-${id}" style="color:#fbbf24; font-weight:600;">Queued</div>
+      <div id="status-\${id}" style="color:#fbbf24; font-weight:600;">Queued</div>
     </div>
 
     <div style="margin-top:10px; width:100%; background:#1f2937; height:8px; border-radius:6px; overflow:hidden;">
-      <div id="bar-${id}" style="height:8px; width:0%; background:#3b82f6;"></div>
+      <div id="bar-\${id}" style="height:8px; width:0%; background:#3b82f6;"></div>
     </div>
 
-    <div id="actions-${id}" style="margin-top:10px;"></div>
+    <div id="actions-\${id}" style="margin-top:10px;"></div>
   `;
 
   resultsDiv.appendChild(card);

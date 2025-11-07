@@ -67,8 +67,6 @@
 
   <!-- FFmpeg UMD -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-  <!-- We let ffmpeg load its core via corePath (wasm/worker are auto-resolved) -->
-
   <!-- JSZip UMD (global window.JSZip) -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -84,17 +82,47 @@
 
   <!-- Settings under dropzone -->
   <div id="settings-panel">
-    <label>
+    <label title="Lossless WebP uses -lossless 1; quality slider is ignored.">
       <input type="checkbox" id="lossless-toggle" />
       Lossless compression
     </label>
 
     <br /><br />
 
-    <label for="quality">WebP Quality</label>
-    <input id="quality" type="range" min="0" max="100" value="90" />
+    <label for="quality" title="0..100 where higher = better quality (larger files). Ignored if Lossless is enabled.">WebP Quality</label>
+    <input id="quality" type="range" min="0" max="100" value="90" title="Drag to set quality (0..100; higher is better quality)" />
     <span id="quality-value">90</span>
     <div class="hint">Lossless ignores the quality slider.</div>
+
+    <br /><br />
+
+    <details>
+      <summary style="cursor:pointer; font-weight:600;">Advanced</summary>
+      <div style="margin-top:14px;">
+        <label for="compression-level" title="Sets -compression_level (0..6). 6 = best compression (smallest) but slowest.">Compression level (higher = more; higher = longer processing time)</label>
+        <input id="compression-level" type="range" min="0" max="6" value="6" title="Drag to set compression level (0..6; higher = smaller but slower)" />
+        <span id="compression-level-value">6</span>
+        <div class="hint">libwebp: 0 (fastest) … 6 (best compression)</div>
+
+        <br /><br />
+
+        <label title="When checked, uses -loop 0 (infinite). Uncheck for -loop -1 (no loop).">
+          <input type="checkbox" id="loop-toggle" checked />
+          Loop animation (if checked, will create a file that will loop playback indefinitely)
+        </label>
+
+        <br /><br />
+
+        <label title="Optimizes for still images via -preset picture.">
+          <input type="checkbox" id="still-toggle" />
+          Still image (optimizes encoding when not an animated sequence)
+        </label>
+      </div>
+    </details>
+
+    <div style="margin-top:14px;">
+      <button id="reset-settings" class="secondary" title="Reset all settings to recommended defaults">Reset to defaults</button>
+    </div>
   </div>
 
   <div id="results"></div>

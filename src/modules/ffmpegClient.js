@@ -31,10 +31,13 @@ export async function initFFmpeg() {
 }
 
 /**
- * Convert to WebP with *smoothed* per-file progress:
+ * Convert to WebP with *smoothed* per-file progress and extended settings:
  * - seed progress to 5% after writeFile()
  * - during encode, map raw ratio [0..1] to [0.05..0.99]
  * - set to 100% after success
+ * - compression level (0..6)
+ * - loop toggle (checked => loop 0 infinite; unchecked => loop -1 no loop)
+ * - preset picture when 'still image' checked
  */
 export async function convertToWebP(ffmpeg, file, settings, onProgress) {
   const inputName = file.name;
@@ -47,23 +50,35 @@ export async function convertToWebP(ffmpeg, file, settings, onProgress) {
 
   const args = ["-i", inputName, "-c:v", "libwebp"];
 
+  // Compression level 0..6 applies to both lossy and lossless in libwebp
+  if (Number.isFinite(settings.compressionLevel)) {
+    args.push("-compression_level", String(settings.compressionLevel));
+  }
+
   if (settings.lossless) {
     args.push("-lossless", "1");
   } else {
     args.push("-qscale", settings.quality.toString());
   }
 
-  // keep animation looping if animated
-  args.push("-loop", "0", outputName);
+  // Loop handling
+  // loop 0 = infinite; loop -1 = no loop; loop 1 = loop once (play twice)
+  const loopValue = settings.loop ? "0" : "-1";
+  args.push("-loop", loopValue);
+
+  // Still image preset optimization
+  if (settings.still) {
+    args.push("-preset", "picture");
+  }
+
+  args.push(outputName);
 
   // Smoothed progress mapping function
   const smooth = (r) => {
-    // 5% baseline, 99% cap during encode
     const mapped = 0.05 + (Math.max(0, Math.min(1, r)) * 0.94); // 0.05..0.99
     return Math.max(0.05, Math.min(0.99, mapped));
   };
 
-  // Attach ephemeral progress handler (scoped to this exec)
   const progressHandler = ({ ratio }) => {
     try { onProgress && onProgress(smooth(ratio)); } catch {}
   };
