@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GIF → WebP Converter</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 { margin-top: 28px; font-weight: 700; }
+    #dropzone {
+      margin-top: 20px;
+      width: 720px;
+      max-width: 94%;
+      border: 2px dashed #475569;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      background: #111827;
+    }
+    #dropzone:hover { border-color: #3b82f6; }
+    #settings-panel {
+      margin-top: 18px;
+      padding: 14px;
+      width: 720px;
+      max-width: 94%;
+      border-radius: 12px;
+      background: #111827;
+      border: 1px solid #1f2937;
+    }
+    #results {
+      width: 720px;
+      max-width: 94%;
+      margin: 24px 0 80px;
+    }
+    .card {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      background: #0b1220;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #3b82f6;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button.secondary { background: #334155; }
+    button:disabled { background: #475569; cursor: default; }
+    .hint { color: #94a3b8; font-size: 14px; }
+  </style>
+
+  <!-- FFmpeg UMD -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <!-- JSZip UMD (global window.JSZip) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <!-- Optional: load WebPMux WASM binding (if available) -->
+  <!-- <script src="/static/webpmux.wasm.js"></script> -->
+</head>
+
+<body>
+  <h1>GIF → WebP Converter</h1>
+  <div class="hint">All processing runs locally in your browser. Files are never uploaded.</div>
+
+  <div id="dropzone">
+    <p>Drag & drop GIFs here or click to choose files</p>
+    <input id="file-input" type="file" accept="image/gif" multiple style="display:none" />
+  </div>
+
+  
+
+
+
+
+<!-- Settings under dropzone -->
+  <div id="settings-panel">
+    <details>
+      <summary style="cursor:pointer; font-weight:600;">Advanced</summary>
+      <div style="margin-top:14px; display:flex; flex-direction:column; gap:12px;">
+        
+        <!-- 1. WebP Quality -->
+        <label for="quality" title="0..100 where higher = better quality (larger files). Ignored if Lossless is enabled.">
+          WebP Quality
+          <br />
+          <input id="quality" type="range" min="0" max="100" value="90" title="Drag to set quality (0..100; higher is better quality)" />
+          <span id="quality-value">90</span>
+          <div class="hint">Lossless ignores the quality slider.</div>
+        </label>
+
+        <!-- 2. Compression Level -->
+        <label for="compression-level" title="Sets -compression_level (0..6). 6 = best compression (smallest) but slowest.">
+          Compression Level
+          <br />
+          <input id="compression-level" type="range" min="0" max="6" value="6" title="Drag to set compression level (0..6; higher = smaller but slower)" />
+          <span id="compression-level-value">6</span>
+          <div class="hint">0 (fastest) -> 6 (best compression)</div>
+        </label>
+
+        <!-- lighter separator line between sliders and checkboxes -->
+        <div style="height:1px; background:#334155; margin:6px 0;"></div>
+
+        <!-- 3. Loop Animation -->
+        <label title="When checked, uses -loop 0 (infinite). Uncheck for -loop -1 (no loop).">
+          <input type="checkbox" id="loop-toggle" checked />
+          Loop Animation (if checked, will create a file that will loop playback indefinitely)
+        </label>
+
+        <!-- 4. Still Image -->
+        <label title="Optimizes for still images via -preset picture.">
+          <input type="checkbox" id="still-toggle" />
+          Still Image (optimizes encoding when not an animated sequence)
+        </label>
+
+        <!-- 5. Lossless Compression -->
+        <label title="Lossless WebP uses -lossless 1; quality slider is ignored.">
+          <input type="checkbox" id="lossless-toggle" />
+          Lossless Compression
+        </label>
+
+        <!-- 6. Mixed Compression -->
+        <label title="Experimental: per-frame lossy/lossless mixing using WebPMux when available; falls back to best-of-two encode.">
+          <input type="checkbox" id="mixed-toggle" />
+          Mixed Compression (combines lossy and lossless frames)
+        </label>
+
+        <!-- 7. Mixed Tuning Mode -->
+        <div style="display:flex; flex-direction:column; gap:8px; padding-left:4px;">
+          <label for="mixed-mode" title="Choose how to decide which frames become lossless">
+            Mixed Tuning Mode
+            <br/>
+            <select id="mixed-mode" title="Percent of most-detailed frames vs. edge-score percentile threshold"
+                    style="background:#334155; color:#ffffff; border:1px solid #475569; border-radius:8px; padding:6px 8px;">
+              <option value="percent" selected>Percent (top X% most-detailed)</option>
+              <option value="threshold">Edge Score Threshold (percentile)</option>
+            </select>
+          </label>
+
+          <label for="mixed-percent" title="Choose what percentage of frames (10–50%) to encode as lossless based on detail rank">
+            Lossless Percentage
+            <br/>
+            <input id="mixed-percent" type="range" min="10" max="50" value="20" />
+            <span id="mixed-percent-value">20%</span>
+            <div class="hint">Top X% of frames by edge detail will be lossless.</div>
+          </label>
+
+          <label for="mixed-threshold" title="Frames with edge detail ≥ this percentile will be lossless (50–99)">
+            Edge Threshold (percentile)
+            <br/>
+            <input id="mixed-threshold" type="range" min="50" max="99" value="80" />
+            <span id="mixed-threshold-value">80th</span>
+            <div class="hint">Lossless for frames at/above this edge-score percentile.</div>
+          </label>
+        </div>
+
+        <div>
+          <button id="reset-settings" class="secondary" title="Reset all settings to recommended defaults">Reset to Defaults</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div id="results">
+
+</div>
+
+  <div style="display:flex; gap:10px; width:720px; max-width:94%; justify-content:flex-start;">
+    <button id="download-all" class="secondary" disabled>Download All Converted Files (ZIP)</button>
+  </div>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
