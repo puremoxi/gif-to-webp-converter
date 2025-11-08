@@ -9,7 +9,6 @@ export function createConversionQueue(proc){
       q.push(...items); return items;
     },
     async run(getSettings,onDone){
-      // Parallel conversion with Promise.all
       const tasks = q.map(it => (async () => {
         try{
           const out=await proc(it.file,{id:it.id,onProgress:r=>updateItemProgress(it.id,r),settings:getSettings()});

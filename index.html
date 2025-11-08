@@ -13,8 +13,7 @@
       <p class="text-gray-400">Local-only FFmpeg (no CDNs). Place core files in <code>vendor/ffmpeg/</code>.</p>
     </header>
 
-    <!-- Improved loader banner -->
-    <div id="ffmpeg-banner" class="hidden max-w-3xl mx-auto mb-4 rounded-xl border border-slate-600 bg-slate-900/70 p-3">
+    <div id="ffmpeg-banner" class="max-w-3xl mx-auto mb-4 rounded-xl border border-slate-600 bg-slate-900/70 p-3 hidden">
       <div class="flex items-start gap-3">
         <div class="text-xl">⚙️</div>
         <div class="flex-1">
@@ -77,58 +76,12 @@
     <div id="results" class="space-y-3"></div>
   </div>
 
-  <!-- Robust local UMD loader (must run BEFORE app.js) -->
+  <script src="/vendor/ffmpeg/ffmpeg.js"></script>
   <script>
-  (async () => {
-    const el = (id) => document.getElementById(id);
-    const banner = el('ffmpeg-banner');
-    const fileEl = el('ffmpeg-banner-file');
-    const cntEl  = el('ffmpeg-banner-count');
-    const barEl  = el('ffmpeg-banner-bar');
-    const close  = el('ffmpeg-banner-close');
-    if (close) close.addEventListener('click', ()=> banner.classList.add('hidden'));
-
-    function showBanner(){ banner.classList.remove('hidden'); }
-    function setStep(step,total,label){ fileEl.textContent = label; cntEl.textContent = `${Math.max(0,step-1)} / ${total} complete`; barEl.style.width = '0%'; }
-    function setPct(p){ barEl.style.width = Math.round(p)+'%'; }
-
-    const localURL = "/vendor/ffmpeg/ffmpeg.js";
-    try {
-      showBanner();
-      setStep(1,3,'ffmpeg.js');
-      // HEAD/GET sanity check
-      const res = await fetch(localURL, { method:'GET', cache:'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      // stream not needed; just load tag now
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = localURL + '?v=' + Date.now();
-        s.onload = () => resolve();
-        s.onerror = (e) => reject(new Error('Failed to execute ffmpeg.js'));
-        document.head.appendChild(s);
-      });
-      setPct(100);
-      cntEl.textContent = `1 / 3 complete`;
-
-      if (!window.FFmpeg) throw new Error('window.FFmpeg missing (UMD did not execute)');
-      if (typeof window.FFmpeg.FFmpeg !== 'function') {
-        if (typeof window.FFmpeg.createFFmpeg === 'function') {
-          throw new Error('Found legacy API (createFFmpeg). Download @ffmpeg/ffmpeg@0.12.10 UMD.');
-        } else {
-          throw new Error('Unexpected FFmpeg UMD shape.');
-        }
-      }
-      // expose a tiny signal so app.js can proceed quickly
-      window.__FFMPEG_UMD_OK__ = true;
-    } catch (err) {
-      console.error('[ffmpeg-loader]', err);
-      fileEl.textContent = 'Loader error';
-      cntEl.textContent = String(err.message || err);
-      barEl.style.width = '0%';
-    }
-  })();
+    if (window.FFmpegWASM && !window.FFmpeg) window.FFmpeg = window.FFmpegWASM;
+    window.__FFMPEG_UMD_OK__ = !!(window.FFmpeg && window.FFmpeg.FFmpeg);
   </script>
 
-  <script type="module" src="./src/app.js"></script>
+  <script type="module" src="/src/app.js"></script>
 </body>
 </html>
