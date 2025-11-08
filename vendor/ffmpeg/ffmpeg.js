@@ -59,9 +59,15 @@
         }
       }
 
-      if (!t) throw new Error("Automatic publicPath is not supported in this browser");
+      if (!t)
+        throw new Error(
+          "Automatic publicPath is not supported in this browser"
+        );
 
-      t = t.replace(/#.*$/, "").replace(/\?.*$/, "").replace(/\/[^\/]+$/, "/");
+      t = t
+        .replace(/#.*$/, "")
+        .replace(/\?.*$/, "")
+        .replace(/\/[^\/]+$/, "/");
       e.p = t;
     })();
 
@@ -94,10 +100,9 @@
         let e = 0;
         return () => e++;
       })(),
-      a = (
-        new Error("unknown message type"),
-        new Error("ffmpeg is not loaded, call `await ffmpeg.load()` first")
-      ),
+      a =
+        (new Error("unknown message type"),
+        new Error("ffmpeg is not loaded, call `await ffmpeg.load()` first")),
       o = new Error("called FFmpeg.terminate()");
 
     new Error("failed to import ffmpeg-core.js");
@@ -151,7 +156,7 @@
 
       #i = ({ type: e, data: t }, s = [], o) =>
         this.#e
-          ? new Promise(((_a, _i) => {
+          ? new Promise((_a, _i) => {
               const n = r();
               this.#e && this.#e.postMessage({ id: n, type: e, data: t }, s);
               this.#t[n] = _a;
@@ -159,11 +164,13 @@
               o?.addEventListener(
                 "abort",
                 () => {
-                  _i(new DOMException(`Message # ${n} was aborted`, "AbortError"));
+                  _i(
+                    new DOMException(`Message # ${n} was aborted`, "AbortError")
+                  );
                 },
                 { once: !0 }
               );
-            }))
+            })
           : Promise.reject(a);
 
       on(e, t) {
