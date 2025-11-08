@@ -1,4 +1,3 @@
-
 export function setupUI(dropzone, fileInput){
   const q=document.getElementById('quality'), qv=document.getElementById('quality-value');
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
@@ -8,7 +7,6 @@ export function setupUI(dropzone, fileInput){
   cl.addEventListener('input',()=>{ clv.textContent=String(cl.value) });
   function sync(){ mix.disabled=loss.checked; if(loss.checked) mix.checked=false; still.disabled=loop.checked; if(loop.checked) still.checked=false; }
   loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
-
   ['dragenter','dragover','dragleave','drop'].forEach(n=>{ dropzone.addEventListener(n,e=>e.preventDefault(),false); document.body.addEventListener(n,e=>e.preventDefault(),false); });
   ['dragenter','dragover'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.add('dropzone-active')));
   ['dragleave','drop'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.remove('dropzone-active')));
@@ -45,4 +43,4 @@ export function setItemError(id,msg){ const s=document.getElementById('status-'+
 export function showBanner(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.style.display='flex'; const p=document.getElementById('ffmpeg-banner-progress'); if(p) p.style.display='block'; }
 export function hideBanner(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.style.display='none'; }
 export function setBannerFileStep(step,total,label){ const sub=document.getElementById('ffmpeg-banner-sub'); if(!sub)return; sub.dataset.step=String(step); sub.dataset.total=String(total); sub.dataset.label=label; sub.textContent=`${label} — 0% (${step-1}/${total} complete)`; }
-export function updateBannerProgress(pct){ const bar=document.getElementById('ffmpeg-banner-progress-bar'); if(bar) bar.style.width=Math.round(pct)+'%'; const sub=document.getElementById('ffmpeg-banner-sub'); if(sub){ const step=parseInt(sub.dataset.step||'0',10); const total=parseInt(sub.dataset.total||'3',10); const lbl=sub.dataset.label||'Downloading…'; const done=Math.max(0,step-1); sub.textContent=`${lbl} — ${Math.round(pct)}% (${done}/${total} complete)`; } }
+export function updateBannerProgress(pct){ const bar=document.getElementById('ffmpeg-banner-progress-bar'); if(bar) bar.style.width=Math.round(pct)+'%'; const sub=document.getElementById('ffmpeg-banner-sub'); if(sub){ const step=parseInt(sub.dataset.step||'0',10); const total=parseInt(sub.dataset.total||'3',10); const lbl=sub.dataset.label||'Loading…'; const done=Math.max(0,step-1); sub.textContent=`${lbl} — ${Math.round(pct)}% (${done}/${total} complete)`; } }
