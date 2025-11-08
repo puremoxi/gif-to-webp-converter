@@ -35,7 +35,6 @@ export function updateItemProgress(id,ratio){ const b=document.getElementById('b
 export function setItemConverted(id,blob,name){ const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id); if(b) b.style.width='100%'; if(s){ s.textContent='Converted'; s.style.color='#22c55e'; } if(a){ const link=document.createElement('a'); link.textContent='Download'; link.href=URL.createObjectURL(blob); link.download=name; link.className='text-blue-400 font-semibold hover:underline mr-3'; a.innerHTML=''; a.appendChild(link);} }
 export function setItemError(id,msg){ const s=document.getElementById('status-'+id); if(s){ s.textContent=msg||'Error'; s.style.color='#ef4444'; } }
 
-// Banner controls used by ffmpegClient.js
 export const bannerCtl = {
   show(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.remove('hidden'); },
   hide(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.add('hidden'); },

@@ -1,24 +1,18 @@
-Place these four files in this folder (exact versions/paths):
+📦 FFmpeg Local Files (Required)
 
-1) ffmpeg.js
-   from: https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
-   alt:  https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
+Use the **PowerShell curl method** to reliably download raw files (avoids HTML placeholders):
 
-2) ffmpeg-core.js
-   from: https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.js
-   alt:  https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.js
+1) Open PowerShell
+2) Navigate to this folder:
+   cd path\to\your\gif-to-webp-converter\vendor\ffmpeg
+3) Run:
+   curl.exe -L "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js" -o ffmpeg.js
+   curl.exe -L "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.js" -o ffmpeg-core.js
+   curl.exe -L "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.wasm" -o ffmpeg-core.wasm
+   curl.exe -L "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.worker.js" -o ffmpeg-core.worker.js
 
-3) ffmpeg-core.wasm
-   from: https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.wasm
-   alt:  https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.wasm
-
-4) ffmpeg-core.worker.js
-   from: https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.worker.js
-   alt:  https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.worker.js
-
-After downloading, ensure these are physically present on disk (OneDrive: “Always keep on this device”).
-Expected sizes (approx):
-- ffmpeg.js ~275 KB
-- ffmpeg-core.js ~260 KB
-- ffmpeg-core.wasm ~6.5 MB
-- ffmpeg-core.worker.js ~3 KB
+Expected files:
+- ffmpeg.js (~275 KB)
+- ffmpeg-core.js (~260 KB)
+- ffmpeg-core.wasm (~6.5 MB)
+- ffmpeg-core.worker.js (~3 KB)
