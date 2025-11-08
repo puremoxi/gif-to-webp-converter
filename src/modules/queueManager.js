@@ -9,12 +9,14 @@ export function createConversionQueue(proc){
       q.push(...items); return items;
     },
     async run(getSettings,onDone){
-      for(const it of q){
+      // Parallel conversion with Promise.all
+      const tasks = q.map(it => (async () => {
         try{
           const out=await proc(it.file,{id:it.id,onProgress:r=>updateItemProgress(it.id,r),settings:getSettings()});
           if(out?.blob){ setItemConverted(it.id,out.blob,out.name); onDone&&onDone({id:it.id,name:out.name,blob:out.blob}); }
         }catch(e){ console.error(e); setItemError(it.id,'Conversion failed'); }
-      }
+      })());
+      await Promise.all(tasks);
     },
     clear(){ q.length=0; const r=document.getElementById('results'); if(r) r.innerHTML=''; }
   };
