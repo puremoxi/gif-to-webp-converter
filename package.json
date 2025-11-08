@@ -1,6 +1,6 @@
 {
-  "name": "gif-webp-converter-v3_3-local",
-  "version": "3.3.0",
+  "name": "gif-to-webp-converter",
+  "version": "3.4.0",
   "private": true,
   "scripts": {
     "start": "npx serve .",
