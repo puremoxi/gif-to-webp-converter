@@ -1,3 +1,4 @@
+
 import { setupUI, getSettings, setPlaceholderThumbnail, setItemThumbnail, setItemMeta, showBanner, hideBanner, setBannerFileStep, updateBannerProgress } from './modules/ui.js';
 import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
 import { createConversionQueue } from './modules/queueManager.js';
@@ -35,7 +36,7 @@ async function handle(files){
   for(const it of items){
     setPlaceholderThumbnail(it.id);
     getGifInfo(it.file).then(info=>setItemMeta(it.id,info)).catch(()=>{});
-    // Quick canvas thumb (no FFmpeg dependency)
+    // quick canvas thumb
     try{
       const url=URL.createObjectURL(it.file); const img=new Image(); img.src=url; await img.decode();
       const size=128; const ratio=(img.width||1)/(img.height||1); const w=Math.min(size,img.width||size); const h=Math.round(w/ratio);

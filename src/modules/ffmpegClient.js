@@ -1,50 +1,87 @@
+
 let ffmpegInstance=null;
-const FF=()=>window?.FFmpeg?.FFmpeg; const fetchFile=(f)=>window?.FFmpegUtil?.fetchFile?.(f);
+const FF=()=>window?.FFmpeg?.FFmpeg;
+const U=()=>window?.FFmpegUtil;
+
+async function waitForUMD(timeoutMs=12000){
+  const t0=Date.now();
+  while(Date.now()-t0 < timeoutMs){
+    if(FF() && U() && typeof U().fetchFile === 'function') return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
 
 async function fetchWithProgress(url,onPct){
   const r=await fetch(url);
-  if(!r.ok) throw new Error('Fetch failed: '+r.status+' '+r.statusText);
+  if(!r.ok) throw new Error(`Fetch failed: ${r.status} ${r.statusText}`);
   const total=Number(r.headers.get('content-length'))||0;
-  if(!r.body||!r.body.getReader||!total){ const blob=await r.blob(); if(onPct) onPct(100); return blob; }
+  if(!r.body || !r.body.getReader || !total){
+    const b=await r.blob(); onPct&&onPct(100); return b;
+  }
   const rd=r.body.getReader(); const chunks=[]; let loaded=0;
-  while(true){ const {done,value}=await rd.read(); if(done) break; chunks.push(value); loaded+=value.byteLength; if(onPct) onPct(loaded*100/total); }
+  while(true){
+    const {done,value}=await rd.read(); if(done) break;
+    chunks.push(value); loaded+=value.byteLength; onPct&&onPct((loaded/total)*100);
+  }
   return new Blob(chunks,{type:r.headers.get('content-type')||'application/octet-stream'});
 }
 
 export async function initFFmpeg(opts={}){
-  if(ffmpegInstance) return ffmpegInstance;
-  const F=FF(); if(!F) throw new Error('FFmpeg library not available');
-  const ffmpeg=new F();
-  const base='https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-  const files=[
-    {label:'ffmpeg-core.js', url: base+'/ffmpeg-core.js'},
-    {label:'ffmpeg-core.wasm', url: base+'/ffmpeg-core.wasm'},
-    {label:'ffmpeg-core.worker.js', url: base+'/ffmpeg-core.worker.js'}
+  const ok=await waitForUMD(12000);
+  if(!ok) throw new Error('FFmpeg library not available');
+
+  const ffmpeg = new (FF())();
+  const fetchFile = U().fetchFile;
+
+  const bases=[
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd",
+    "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd"
   ];
-  try{ opts.onStart&&opts.onStart(); }catch{}
-  const blobs=[];
-  for(let i=0;i<files.length;i++){
-    const {label,url}=files[i];
-    try{ opts.onFileStep&&opts.onFileStep(i+1,files.length,label);}catch{}
-    const blob=await fetchWithProgress(url,(pct)=>{ try{ opts.onProgress&&opts.onProgress(pct,i+1,files.length,label);}catch{} });
-    blobs.push(blob);
-    try{ opts.onProgress&&opts.onProgress(100,i+1,files.length,label);}catch{}
+  const files=["ffmpeg-core.js","ffmpeg-core.wasm","ffmpeg-core.worker.js"];
+  let blobs=null;
+
+  opts.onStart && opts.onStart();
+
+  for(const base of bases){
+    try{
+      const bs=[];
+      for(let i=0;i<files.length;i++){
+        const label=files[i], url=`${base}/${label}`;
+        opts.onFileStep && opts.onFileStep(i+1, files.length, label);
+        const b=await fetchWithProgress(url, (pct)=> opts.onProgress && opts.onProgress(pct, i+1, files.length, label));
+        bs.push(b);
+        opts.onProgress && opts.onProgress(100, i+1, files.length, label);
+      }
+      blobs=bs; break;
+    }catch(e){
+      console.warn('[ffmpeg] Core fetch failed from base:', base, e);
+      blobs=null;
+    }
   }
-  const [jsb,wasmb,workb]=blobs;
-  const coreURL=URL.createObjectURL(jsb), wasmURL=URL.createObjectURL(wasmb), workerURL=URL.createObjectURL(workb);
+  if(!blobs) throw new Error('Failed to fetch FFmpeg core from all bases');
+
+  const [jsb, wasmb, workb]=blobs;
+  const coreURL=URL.createObjectURL(jsb);
+  const wasmURL=URL.createObjectURL(wasmb);
+  const workerURL=URL.createObjectURL(workb);
+
   try{
-    await ffmpeg.load({coreURL, wasmURL, workerURL});
-    try{ opts.onStatus&&opts.onStatus('Converter ready.'); }catch{}
+    await ffmpeg.load({ coreURL, wasmURL, workerURL });
+    opts.onStatus && opts.onStatus('Converter ready.');
   } finally {
-    try{ opts.onDone&&opts.onDone(); }catch{}
+    opts.onDone && opts.onDone();
     URL.revokeObjectURL(coreURL); URL.revokeObjectURL(wasmURL); URL.revokeObjectURL(workerURL);
   }
-  ffmpegInstance=ffmpeg; return ffmpegInstance;
+
+  // Expose helpers expected by other modules
+  ffmpeg.fetchFile = fetchFile;
+  return (ffmpegInstance = ffmpeg);
 }
 
 export async function convertToWebP(ffmpeg,file,settings,onProgress){
   const input=file.name, output=input.replace(/\.gif$/i,'.webp');
-  await ffmpeg.writeFile(input, await fetchFile(file));
+  await ffmpeg.writeFile(input, await ffmpeg.fetchFile(file));
   const args=['-i',input,'-c:v','libwebp'];
   if(Number.isFinite(settings.compressionLevel)) args.push('-compression_level',String(settings.compressionLevel));
   if(settings.lossless) args.push('-lossless','1'); else args.push('-qscale',String(settings.quality));
@@ -52,7 +89,7 @@ export async function convertToWebP(ffmpeg,file,settings,onProgress){
   if(settings.still) args.push('-preset','picture');
   args.push(output);
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
-  const h=({progress})=>{ try{ onProgress&&onProgress(smooth(progress)); }catch{} };
+  const h=({progress})=>{ onProgress && onProgress(smooth(progress)); };
   ffmpeg.on('progress',h);
   try{ await ffmpeg.exec(args); } finally { try{ ffmpeg.off('progress',h);}catch{} }
   const data=await ffmpeg.readFile(output);

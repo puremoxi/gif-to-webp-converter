@@ -1,3 +1,4 @@
+
 export function setupUI(dropzone, fileInput){
   const q=document.getElementById('quality'), qv=document.getElementById('quality-value');
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
@@ -7,6 +8,7 @@ export function setupUI(dropzone, fileInput){
   cl.addEventListener('input',()=>{ clv.textContent=String(cl.value) });
   function sync(){ mix.disabled=loss.checked; if(loss.checked) mix.checked=false; still.disabled=loop.checked; if(loop.checked) still.checked=false; }
   loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
+
   ['dragenter','dragover','dragleave','drop'].forEach(n=>{ dropzone.addEventListener(n,e=>e.preventDefault(),false); document.body.addEventListener(n,e=>e.preventDefault(),false); });
   ['dragenter','dragover'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.add('dropzone-active')));
   ['dragleave','drop'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.remove('dropzone-active')));

@@ -1,3 +1,4 @@
+
 import { addQueuedItem, updateItemProgress, setItemConverted, setItemError } from './ui.js';
 export function createConversionQueue(proc){
   const q=[];
@@ -10,8 +11,9 @@ export function createConversionQueue(proc){
     },
     async run(getSettings,onDone){
       for(const it of q){
-        try{ const out=await proc(it.file,{id:it.id,onProgress:r=>updateItemProgress(it.id,r),settings:getSettings()});
-          if(out?.blob) { setItemConverted(it.id,out.blob,out.name); onDone&&onDone({id:it.id,name:out.name,blob:out.blob}); }
+        try{
+          const out=await proc(it.file,{id:it.id,onProgress:r=>updateItemProgress(it.id,r),settings:getSettings()});
+          if(out?.blob){ setItemConverted(it.id,out.blob,out.name); onDone&&onDone({id:it.id,name:out.name,blob:out.blob}); }
         }catch(e){ console.error(e); setItemError(it.id,'Conversion failed'); }
       }
     },
