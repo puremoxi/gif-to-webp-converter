@@ -1,10 +1,8 @@
 {
-  "name": "gif-to-webp-converter-pro",
+  "name": "gif-webp-v3-mini",
   "version": "1.0.0",
   "private": true,
-  "description": "Local GIF \u2192 WebP converter with progress, thumbnails, metadata, ZIP download.",
   "scripts": {
-    "start": "npx serve .",
-    "serve": "npx serve ."
+    "start": "npx serve ."
   }
 }
