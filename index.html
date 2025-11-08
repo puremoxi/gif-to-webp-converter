@@ -1,49 +1,103 @@
+
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
 <title>GIF → WebP Converter</title>
+
+<!-- Dev CDN (fine for local testing). For production, compile Tailwind. -->
 <script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Primary UMDs (unpkg). If blocked, the fallback loader below will pull from jsDelivr. -->
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
 <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
+
+<!-- Fallback loader: if either UMD is missing (blocked), fetch from jsDelivr -->
+<script>
+window.addEventListener('load', async () => {
+  const hasFF = !!(window.FFmpeg && window.FFmpeg.FFmpeg);
+  const hasUtil = !!(window.FFmpegUtil && window.FFmpegUtil.fetchFile);
+  if (hasFF && hasUtil) return;
+
+  const load = (src) => new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+
+  try {
+    if (!hasFF) {
+      await load('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+    }
+    if (!hasUtil) {
+      await load('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js');
+    }
+    console.log('[loader] Switched to jsDelivr for FFmpeg UMDs');
+  } catch (e) {
+    console.error('[loader] Failed to load FFmpeg UMDs from both CDNs', e);
+  }
+});
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<style>body{font-family:ui-sans-serif,system-ui,-apple-system,"Inter","Segoe UI",Roboto,"Helvetica Neue",Arial}.card{background:#0f172a;border:1px solid #1f2937;border-radius:12px;padding:12px 14px}.hint{color:#94a3b8;font-size:.9rem}.dropzone-active{border-color:#2563eb;background:#0b1220}</style>
+
+<style>
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+  .card { background:#0f172a; border:1px solid #1f2937; border-radius:12px; padding:12px 14px; }
+  .hint { color:#94a3b8; font-size:.9rem; }
+  .dropzone-active{ border-color:#2563eb; background:#0b1220; }
+</style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
 <div class="max-w-5xl mx-auto">
-<header class="text-center mb-6"><h1 class="text-3xl md:text-4xl font-bold text-white mb-2">GIF → WebP Converter</h1><p class="text-gray-400">Convert animated GIFs to high‑quality WebP locally.</p></header>
-<div id="ffmpeg-banner" style="display:none;max-width:94%;width:720px;margin:0 auto 12px;background:#0b1220;border:1px solid #334155;color:#e2e8f0;border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
-  <div style="font-size:18px;line-height:1">⚙️</div>
-  <div style="flex:1">
-    <div id="ffmpeg-banner-text" style="font-weight:600;margin-bottom:4px">Downloading converter engine…</div>
-    <div id="ffmpeg-banner-sub" style="font-size:14px;color:#94a3b8;margin-bottom:6px" data-step="0" data-total="3" data-label="Preparing files">Preparing files — 0% (0/3 complete)</div>
-    <div id="ffmpeg-banner-progress" style="height:8px;background:#111827;border:1px solid #1f2937;border-radius:8px;overflow:hidden;display:none">
-      <div id="ffmpeg-banner-progress-bar" style="height:8px;width:0%;background:#3b82f6;transition:width .2s linear"></div>
+  <header class="text-center mb-6">
+    <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">GIF → WebP Converter</h1>
+    <p class="text-gray-400">Convert animated GIFs to high‑quality WebP locally.</p>
+  </header>
+
+  <!-- FFmpeg banner -->
+  <div id="ffmpeg-banner" style="display:none;max-width:94%;width:720px;margin:0 auto 12px;background:#0b1220;border:1px solid #334155;color:#e2e8f0;border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
+    <div style="font-size:18px;line-height:1">⚙️</div>
+    <div style="flex:1">
+      <div id="ffmpeg-banner-text" style="font-weight:600;margin-bottom:4px">Downloading converter engine…</div>
+      <div id="ffmpeg-banner-sub" style="font-size:14px;color:#94a3b8;margin-bottom:6px" data-step="0" data-total="3" data-label="Preparing files">Preparing files — 0% (0/3 complete)</div>
+      <div id="ffmpeg-banner-progress" style="height:8px;background:#111827;border:1px solid #1f2937;border-radius:8px;overflow:hidden;display:none">
+        <div id="ffmpeg-banner-progress-bar" style="height:8px;width:0%;background:#3b82f6;transition:width .2s linear"></div>
+      </div>
     </div>
+    <button id="ffmpeg-banner-close" title="Dismiss" style="background:transparent;color:#94a3b8;border:none;font-size:18px;cursor:pointer">×</button>
   </div>
-  <button id="ffmpeg-banner-close" title="Dismiss" style="background:transparent;color:#94a3b8;border:none;font-size:18px;cursor:pointer">×</button>
-</div>
-<div id="dropzone" class="border-4 border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center cursor-pointer transition-all duration-300 hover:border-gray-500 mb-4">
-  <input type="file" id="fileInput" multiple accept="image/gif" class="hidden">
-  <p class="text-xl font-medium text-white">Drag & drop your .gif files here</p>
-  <p class="text-gray-400">or click to select files</p>
-  <p id="converter-status" class="mt-3 text-yellow-400 font-medium"></p>
-</div>
-<div class="flex flex-col sm:flex-row justify-center gap-4 my-4">
-  <button id="start-button" disabled class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Start Conversion</button>
-  <button id="clear-button" class="bg-gray-700 text-gray-300 font-semibold py-3 px-6 rounded-lg hover:bg-gray-600 transition-all duration-200">Clear Queue</button>
-  <button id="download-all" disabled class="bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-all duration-200 disabled:opacity-50">Download ZIP</button>
-</div>
-<details class="mb-4"><summary class="cursor-pointer font-semibold">Advanced</summary>
-  <div class="mt-3 flex flex-col gap-3">
-    <label>WebP Quality<br/><input id="quality" type="range" min="0" max="100" value="90" /><span id="quality-value">90</span><div class="hint">Lossless ignores the quality slider.</div></label>
-    <label>Compression Level<br/><input id="compression-level" type="range" min="0" max="6" value="6" /><span id="compression-level-value">6</span><div class="hint">0 (fastest) -> 6 (best compression)</div></label>
-    <div style="height:1px;background:#334155;margin:6px 0"></div>
-    <label><input type="checkbox" id="loop-toggle" checked/> Loop Animation</label>
-    <label><input type="checkbox" id="still-toggle"/> Still Image</label>
-    <label><input type="checkbox" id="lossless-toggle"/> Lossless Compression</label>
-    <label><input type="checkbox" id="mixed-toggle"/> Mixed Compression</label>
+
+  <div id="dropzone" class="border-4 border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center cursor-pointer transition-all duration-300 hover:border-gray-500 mb-4">
+    <input type="file" id="fileInput" multiple accept="image/gif" class="hidden">
+    <p class="text-xl font-medium text-white">Drag & drop your .gif files here</p>
+    <p class="text-gray-400">or click to select files</p>
+    <p id="converter-status" class="mt-3 text-yellow-400 font-medium"></p>
   </div>
-</details>
-<div id="results" class="space-y-3"></div>
+
+  <div class="flex flex-col sm:flex-row justify-center gap-4 my-4">
+    <button id="start-button" disabled class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Start Conversion</button>
+    <button id="clear-button" class="bg-gray-700 text-gray-300 font-semibold py-3 px-6 rounded-lg hover:bg-gray-600 transition-all duration-200">Clear Queue</button>
+    <button id="download-all" disabled class="bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-all duration-200 disabled:opacity-50">Download ZIP</button>
+  </div>
+
+  <details class="mb-4"><summary class="cursor-pointer font-semibold">Advanced</summary>
+    <div class="mt-3 flex flex-col gap-3">
+      <label>WebP Quality<br/><input id="quality" type="range" min="0" max="100" value="90"/><span id="quality-value">90</span><div class="hint">Lossless ignores the quality slider.</div></label>
+      <label>Compression Level<br/><input id="compression-level" type="range" min="0" max="6" value="6"/><span id="compression-level-value">6</span><div class="hint">0 (fastest) -> 6 (best compression)</div></label>
+      <div style="height:1px;background:#334155;margin:6px 0"></div>
+      <label><input type="checkbox" id="loop-toggle" checked/> Loop Animation</label>
+      <label><input type="checkbox" id="still-toggle"/> Still Image</label>
+      <label><input type="checkbox" id="lossless-toggle"/> Lossless Compression</label>
+      <label><input type="checkbox" id="mixed-toggle"/> Mixed Compression</label>
+    </div>
+  </details>
+
+  <div id="results" class="space-y-3"></div>
 </div>
+
 <script type="module" src="./src/app.js"></script>
-</body></html>
+</body>
+</html>

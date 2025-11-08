@@ -1,2 +1,12 @@
-# Mini v3 build with animated per-file FFmpeg loader, placeholders, canvas thumbs, fps fix.
-Run: `npx serve .` then open http://localhost:3000/
+
+# GIF → WebP Converter (UMD fallback build)
+
+- Adds **UMD fallback loader** (jsDelivr if unpkg is blocked).
+- FFmpeg client **waits for UMD** and tries core from **jsDelivr → unpkg**.
+- Mini feature set for debugging loader & conversion.
+
+## Run
+```bash
+npx serve .
+# open http://localhost:3000/
+```

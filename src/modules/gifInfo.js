@@ -1,3 +1,4 @@
+
 export async function getGifInfo(file){
   const buf = await file.arrayBuffer();
   const dv = new DataView(buf);
