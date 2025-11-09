@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GIF → WebP Converter (FFmpeg MT)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>.dropzone-active{border-color:#2563eb;background-color:#1e3a8a}</style>
+  <style>
+    .dropzone-active{border-color:#2563eb;background-color:#1e3a8a}
+  </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
   <div class="max-w-5xl mx-auto">
@@ -13,6 +15,8 @@
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">GIF → WebP Converter</h1>
       <p class="text-gray-400">Multi‑threaded FFmpeg WASM (core‑mt). Place all UMD files in <code>vendor/ffmpeg/</code>.</p>
     </header>
+
+    <!-- FFmpeg loader banner -->
     <div id="ffmpeg-banner" class="max-w-3xl mx-auto mb-4 rounded-xl border border-slate-600 bg-slate-900/70 p-3 hidden">
       <div class="flex items-start gap-3">
         <div class="text-xl">⚙️</div>
@@ -26,9 +30,11 @@
             <div id="ffmpeg-banner-bar" class="h-2 w-0 bg-blue-500 transition-[width] duration-150 ease-linear"></div>
           </div>
         </div>
-        <button id="ffmpeg-banner-close" class="text-slate-400 hover:text-slate-200">✕</button>
+        <button id="ffmpeg-banner-close" class="text-slate-400 hover:text-slate-200" onclick="document.getElementById('ffmpeg-banner').classList.add('hidden')">✕</button>
       </div>
     </div>
+
+    <!-- Dropzone -->
     <div id="dropzone" class="relative border-4 border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center transition-all duration-300 hover:border-gray-500 mb-4">
       <input type="file" id="fileInput" multiple accept="image/gif" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Choose GIF files"/>
       <div class="pointer-events-none select-none">
@@ -37,11 +43,15 @@
         <p id="converter-status" class="mt-3 text-yellow-400 font-medium"></p>
       </div>
     </div>
+
+    <!-- Controls -->
     <div class="flex flex-col sm:flex-row justify-center gap-4 my-4">
       <button id="start-button" disabled class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Start Conversion</button>
       <button id="clear-button" class="bg-gray-700 text-gray-300 font-semibold py-3 px-6 rounded-lg hover:bg-gray-600 transition-all duration-200">Clear Queue</button>
       <button id="download-all" disabled class="bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-all duration-200 disabled:opacity-50">Download ZIP</button>
     </div>
+
+    <!-- Advanced -->
     <details class="mb-4"><summary class="cursor-pointer font-semibold">Advanced</summary>
       <div class="mt-3 flex flex-col gap-3">
         <label class="space-y-1">
@@ -67,13 +77,19 @@
         <label class="inline-flex items-center gap-2"><input type="checkbox" id="mixed-toggle"/> Mixed Compression</label>
       </div>
     </details>
+
+    <!-- Results -->
     <div id="results" class="space-y-3"></div>
   </div>
+
+  <!-- Local UMD loader (brings window.FFmpeg / window.FFmpegWASM) -->
   <script src="/vendor/ffmpeg/ffmpeg.js"></script>
   <script>
+    // Bridge compatibility if needed
     if (window.FFmpegWASM && !window.FFmpeg) window.FFmpeg = window.FFmpegWASM;
     window.__FFMPEG_UMD_OK__ = !!(window.FFmpeg && window.FFmpeg.FFmpeg);
   </script>
+  <!-- App -->
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>

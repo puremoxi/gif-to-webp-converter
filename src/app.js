@@ -22,7 +22,7 @@ function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
   try{
     ffmpeg=await initFFmpeg();
     ffmpegReady=true; status.textContent='Converter ready. Please add files.'; updateStart();
-  }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains all core-mt UMD files and use node server.cjs.'; }
+  }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
 })();
 const queue=createConversionQueue(async (file,ctx)=> convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress));
 fileInput.addEventListener('change', async ()=>{

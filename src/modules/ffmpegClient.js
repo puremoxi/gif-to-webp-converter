@@ -1,4 +1,4 @@
-import { bannerCtl } from './ui.js';
+import { bannerCtl, pct } from './ui.js';
 
 function getFFGlobal(){
   const g = (window.FFmpeg || window.FFmpegWASM);
@@ -33,11 +33,11 @@ export async function initFFmpeg(opts={}){
   };
   bannerCtl.show();
   try{
-    bannerCtl.step(1,3,'ffmpeg-core.js'); bannerCtl.pct(100);
-    bannerCtl.step(2,3,'ffmpeg-core.wasm'); bannerCtl.pct(100);
-    bannerCtl.step(3,3,'ffmpeg-core.worker.js'); bannerCtl.pct(0);
+    bannerCtl.step(1,3,'ffmpeg-core.js'); pct(100);
+    bannerCtl.step(2,3,'ffmpeg-core.wasm'); pct(100);
+    bannerCtl.step(3,3,'ffmpeg-core.worker.js'); pct(0);
     await ffmpeg.load(urls);
-    bannerCtl.pct(100);
+    pct(100);
   } finally { setTimeout(()=>bannerCtl.hide(), 400); }
   const maybeFetchFile = (d.g && d.g.fetchFile) || null;
   ffmpeg.fetchFile = (typeof maybeFetchFile === 'function') ? maybeFetchFile : polyfillFetchFile;
