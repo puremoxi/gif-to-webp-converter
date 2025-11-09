@@ -7,12 +7,13 @@ export function setupUI(dropzone, fileInput){
   cl.addEventListener('input',()=>{ clv.textContent=String(cl.value) });
   function sync(){ mix.disabled=loss.checked; if(loss.checked) mix.checked=false; still.disabled=loop.checked; if(loop.checked) still.checked=false; }
   loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
-
-  ['dragenter','dragover','dragleave','drop'].forEach(n=>{ dropzone.addEventListener(n,e=>e.preventDefault(),false); document.body.addEventListener(n,e=>e.preventDefault(),false); });
+  ['dragenter','dragover','dragleave','drop'].forEach(n=>{
+    dropzone.addEventListener(n,e=>e.preventDefault(),false);
+    document.body.addEventListener(n,e=>e.preventDefault(),false);
+  });
   ['dragenter','dragover'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.add('dropzone-active')));
   ['dragleave','drop'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.remove('dropzone-active')));
 }
-
 export function addQueuedItem(id,name,size){
   const r=document.getElementById('results'); const card=document.createElement('div'); card.className='card bg-slate-900/70 border border-slate-700 rounded-xl p-3'; card.id='item-'+id;
   card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -24,7 +25,6 @@ export function addQueuedItem(id,name,size){
     <div id="actions-${id}" style="margin-top:10px"></div>`;
   r.appendChild(card);
 }
-
 export function setPlaceholderThumbnail(id){
   const img=document.getElementById('thumb-'+id); if(!img) return;
   const c=document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d'); ctx.fillStyle='#1f2937'; ctx.fillRect(0,0,64,64); img.src=c.toDataURL('image/png');
@@ -34,7 +34,6 @@ export function setItemMeta(id,info){ const m=document.getElementById('meta-'+id
 export function updateItemProgress(id,ratio){ const b=document.getElementById('bar-'+id), s=document.getElementById('status-'+id); if(b) b.style.width=Math.round(ratio*100)+'%'; if(s){ s.textContent='Processing '+Math.round(ratio*100)+'%'; s.style.color='#60a5fa'; } }
 export function setItemConverted(id,blob,name){ const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id); if(b) b.style.width='100%'; if(s){ s.textContent='Converted'; s.style.color='#22c55e'; } if(a){ const link=document.createElement('a'); link.textContent='Download'; link.href=URL.createObjectURL(blob); link.download=name; link.className='text-blue-400 font-semibold hover:underline mr-3'; a.innerHTML=''; a.appendChild(link);} }
 export function setItemError(id,msg){ const s=document.getElementById('status-'+id); if(s){ s.textContent=msg||'Error'; s.style.color='#ef4444'; } }
-
 export const bannerCtl = {
   show(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.remove('hidden'); },
   hide(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.add('hidden'); },

@@ -1,9 +1,9 @@
 {
   "name": "gif-to-webp-converter",
-  "version": "3.5.0",
+  "version": "3.6.2",
   "private": true,
   "scripts": {
-    "start": "npx serve .",
+    "serve:coep": "node server.cjs",
     "serve:py": "python -m http.server 3000"
   }
 }

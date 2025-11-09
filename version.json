@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "app": {
+    "name": "gif-to-webp-converter",
+    "version": "3.6.2",
+    "mode": "multi-threaded",
+    "build_time_utc": "2025-11-09T21:59:14Z"
+  },
+  "ffmpeg": {
+    "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD)",
+    "core": "@ffmpeg/core-mt@0.12.6 (UMD)",
+    "requires_coop_coep": true,
+    "required_vendor_artifacts": [
+      "vendor/ffmpeg/ffmpeg.js",
+      "vendor/ffmpeg/ffmpeg-core.js",
+      "vendor/ffmpeg/ffmpeg-core.wasm",
+      "vendor/ffmpeg/ffmpeg-core.worker.js",
+      "vendor/ffmpeg/*.ffmpeg.js"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "index.html",
+      "size": 4848,
+      "sha256": "9141c726df47307f45ebc029f00fbba54c7e4def5ace2484a5d3e8b0a95010fe"
+    },
+    {
+      "path": "server.cjs",
+      "size": 887,
+      "sha256": "639d8b3a4bfdd8e7297f7af9855d2bc3dff895515668510f25c27455ed8f1db6"
+    },
+    {
+      "path": "README.md",
+      "size": 1280,
+      "sha256": "38aa165694c3f8dfe9c9098c1cc95915278bfd851ae4911a5a8471f692087531"
+    },
+    {
+      "path": "package.json",
+      "size": 180,
+      "sha256": "640cf530aa57c27652c8251537d264a2c92d46d9f59652d1cf21685f603e791b"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "size": 4593,
+      "sha256": "d1ee670c0a4f235c4d229b165a35ce8b0d0578db55837fefbcbb860a7651c353"
+    },
+    {
+      "path": "src/app.js",
+      "size": 3980,
+      "sha256": "a97d1c5b718c11a523ccb58202dc61a93a2c6fd708f90bc3f998e2243282b8cf"
+    },
+    {
+      "path": "src/modules/ui.js",
+      "size": 4739,
+      "sha256": "f6aeb446ee5d1dd2f9a997e39f4ea37124364a70b54c10118b085b85c93a14f7"
+    },
+    {
+      "path": "src/modules/gifInfo.js",
+      "size": 1146,
+      "sha256": "d7362cca9e08a0453be2567e02bf2dc3e5f521f29ea1330fe43aaeadea1b49bc"
+    },
+    {
+      "path": "src/modules/ffmpegClient.js",
+      "size": 3129,
+      "sha256": "c8670809ea1c80737b070ffd2616c04b56f0cd8d0de0a8c438a5beac54884991"
+    },
+    {
+      "path": "src/modules/queueManager.js",
+      "size": 1044,
+      "sha256": "feaea3c83ad4ce0eb79bb72052bf4d09a64018a9eba886560e3ca752fae9fd96"
+    },
+    {
+      "path": "vendor/ffmpeg/README.txt",
+      "size": 559,
+      "sha256": "9b57ecd2fe91b10cda56c20c7fb4bafb44b58e0c2c2a51dd99d1e67d950dd97c"
+    }
+  ],
+  "changelog": "See CHANGELOG.md in the project root for human-readable changes."
+}
