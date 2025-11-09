@@ -1,137 +1,93 @@
-# 🎞️ GIF → WebP Converter — Version 3.5
 
-A **local-only web app** for converting GIFs into WebP images using FFmpeg WebAssembly (WASM).  
-No network calls or uploads — everything runs directly in your browser.
+# GIF → WebP Converter — v3.6 (Multi‑Thread)
 
----
+This edition uses **@ffmpeg/core-mt** with Web Workers for the fastest performance. It requires you to place the **entire** UMD directory in `vendor/ffmpeg/` and to run the included COOP/COEP server.
 
-## 🚀 Quick Start
-
-### 1️⃣ Download and extract
-Unzip `gif-to-webp-converter-v3_5.zip` to a convenient folder.
-
-### 2️⃣ Install FFmpeg WASM core files
-Inside `vendor/ffmpeg/`, open **PowerShell** and run:
-
+## ⚡ Quick Start
 ```powershell
-curl.exe -L "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js" -o ffmpeg.js
-curl.exe -L "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.js" -o ffmpeg-core.js
-curl.exe -L "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.wasm" -o ffmpeg-core.wasm
-curl.exe -L "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.worker.js" -o ffmpeg-core.worker.js
+npm init -y
+npm pack @ffmpeg/core-mt@0.12.6
+tar -xf .\ffmpeg-core-mt-0.12.6.tgz
+xcopy /E /I /Y ".\package\dist\umd\*" ".\vendor\ffmpeg\"
+curl.exe -L "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js" -o vendor/ffmpeg/ffmpeg.js
 ```
-
-Expected sizes:
-- `ffmpeg.js` ≈ 275 KB  
-- `ffmpeg-core.js` ≈ 260 KB  
-- `ffmpeg-core.wasm` ≈ 6.5 MB  
-- `ffmpeg-core.worker.js` ≈ 3 KB
-
-### 3️⃣ Start a local server
-In the project root, run one of the following:
-
-#### Option 1 — Node.js Serve
+Then:
 ```bash
-npx serve .
+node server.cjs
 ```
-Then open `http://localhost:3000` (or whichever port appears).
+Open http://localhost:3000
 
-#### Option 2 — Python
+### Verify in DevTools → Network
+- `ffmpeg-core.worker.js` → 200
+- `*.ffmpeg.js` chunks (e.g., `814.ffmpeg.js`) → 200
+- No MIME/CORS errors → loader banner reaches “Converter ready.”
+
+## Project Layout
+(see also `vendor/ffmpeg/README.txt`)
+- `vendor/ffmpeg/` must contain all UMD files from `@ffmpeg/core-mt@0.12.6/dist/umd/` **plus** `ffmpeg.js` (loader).
+- `src/modules/ffmpegClient.js` loads `coreURL/wasmURL/workerURL` via direct URLs for reliability.
+- `server.cjs` sets COOP/COEP headers.
+
+## Switching to Single‑Thread (optional)
+Use `@ffmpeg/core@0.12.6` (no worker; only JS+WASM) and remove `workerURL` in `ffmpegClient.js`. Slightly slower but no COOP/COEP needed.
+
+
+---
+## 🧾 Version Manifest Schema (`version.json`)
+
+This file is **machine-readable** metadata about a given build. It is used by tools and the server to verify integrity and required assets.
+
+```jsonc
+{
+  "schema_version": 1,           // Manifest schema version
+  "app": {
+    "name": "gif-to-webp-converter",
+    "version": "3.6.2",
+    "mode": "multi-threaded",    // or "single-threaded"
+    "build_time_utc": "2025-11-09T22:00:00Z"
+  },
+  "ffmpeg": {
+    "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD)",
+    "core": "@ffmpeg/core-mt@0.12.6 (UMD)",
+    "requires_coop_coep": true,
+    "required_vendor_artifacts": [
+      "vendor/ffmpeg/ffmpeg.js",
+      "vendor/ffmpeg/ffmpeg-core.js",
+      "vendor/ffmpeg/ffmpeg-core.wasm",
+      "vendor/ffmpeg/ffmpeg-core.worker.js",
+      "vendor/ffmpeg/*.ffmpeg.js" // glob: at least one file must match
+    ]
+  },
+  "artifacts": [
+    { "path": "index.html", "size": 3197, "sha256": "…" },
+    { "path": "server.cjs", "size": 713, "sha256": "…" },
+    { "path": "README.md", "size": 2985, "sha256": "…" }
+    // …etc
+  ],
+  "changelog": "See CHANGELOG.md in the project root for human-readable changes."
+}
+```
+
+### Fields
+- **schema_version**: integer, bumps if we change structure.
+- **app**: product info (name, semantic version, build mode, timestamp).
+- **ffmpeg**:
+  - **loader**/**core**: exact versions expected.
+  - **requires_coop_coep**: whether the app needs cross-origin isolation headers.
+  - **required_vendor_artifacts**: list of *exact files* and/or **glob patterns** that must be present before conversions can run.
+- **artifacts**: hashes & sizes of shipped source files (used by CI and support).
+- **changelog**: pointer to the human-readable release notes.
+
+---
+## 🧪 Boot-time manifest validation
+
+When you run:
 ```bash
-python -m http.server 3000
+node server.cjs
 ```
-Then open `http://localhost:3000`.
+the server will:
+1. Parse `version.json` and validate required fields.
+2. Verify **required vendor artifacts** exist (supports the `*.ffmpeg.js` glob).
+3. Print **warnings** if files are missing or if **COOP/COEP** is required but you’re not using this server.
 
----
-
-## 🧩 Features
-
-| Feature | Description |
-|----------|-------------|
-| 🧠 **Fully local FFmpeg WASM** | Runs entirely in your browser — no uploads, no APIs. |
-| 📁 **Drag-and-drop GIFs** | Queue up one or many `.gif` files. |
-| ⚙️ **Custom conversion settings** | Adjust quality, compression level, lossless mode, and looping. |
-| 📊 **Live progress indicators** | Banner and per-file bars show loading and conversion progress. |
-| 🖼️ **Instant thumbnails** | Generates previews for each queued GIF. |
-| 🧮 **Animated info parsing** | Reads frame count, FPS, and detects still vs animated. |
-| 📦 **ZIP export** | Download all converted WebPs in a single ZIP file. |
-
----
-
-## 🧱 Technical Architecture
-
-### File Structure
-```
-gif-to-webp-converter/
-├─ index.html
-├─ package.json
-├─ README.md
-├─ vendor/
-│  └─ ffmpeg/
-│      ├─ ffmpeg.js
-│      ├─ ffmpeg-core.js
-│      ├─ ffmpeg-core.wasm
-│      └─ ffmpeg-core.worker.js
-└─ src/
-   ├─ app.js
-   └─ modules/
-       ├─ ffmpegClient.js
-       ├─ gifInfo.js
-       ├─ queueManager.js
-       └─ ui.js
-```
-
-### Load Order & Race Condition Fixes
-We explicitly load scripts in deterministic order:
-```html
-<script src="/vendor/ffmpeg/ffmpeg.js"></script>
-<script>
-  if (window.FFmpegWASM && !window.FFmpeg) window.FFmpeg = window.FFmpegWASM;
-</script>
-<script type="module" src="/src/app.js"></script>
-```
-This ensures the UMD script executes before your module imports run.
-
-### `ffmpegClient.js` Highlights
-- Tolerant to either `window.FFmpeg` or `window.FFmpegWASM`
-- Safe fetch polyfill if `fetchFile` is missing
-- Proper `URL.revokeObjectURL()` cleanup
-- Banner progress integration
-- Absolute base path (`/vendor/ffmpeg`) to avoid module-relative issues
-
----
-
-## 🧠 Troubleshooting
-
-### ❌ `Loader error · window.FFmpeg missing (UMD did not execute)`
-**Cause:** Race condition — `app.js` runs before FFmpeg UMD loads.  
-**Fix:** Ensure your HTML includes the `<script>` order above, and that files are in `vendor/ffmpeg/` exactly as named.
-
-### ❌ 404 errors in console (`ffmpeg-core.js` not found)
-**Cause:** Wrong file path or name.  
-**Fix:** Verify file names match **exactly** and that `vendor/ffmpeg/` is served by your local server.
-
-### ⚠️ Slow load (~10–15 seconds)
-First load may take time due to `ffmpeg-core.wasm` (~6.5 MB). Subsequent loads are cached by the browser.
-
----
-
-## 🧰 Advanced Customization
-
-You can change the default FFmpeg core path by editing:
-```js
-const base = "/vendor/ffmpeg";
-```
-in `src/modules/ffmpegClient.js`.
-
-You can also alter the default conversion settings in `src/app.js` near `getSettings()`.
-
----
-
-## 📜 License
-MIT License © 2025
-
----
-
-## 🙌 Credits
-Built with ❤️ by Ryan McDougal & ChatGPT (GPT‑5)  
-Powered by [FFmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) and [TailwindCSS](https://tailwindcss.com).
+Validation **does not stop** the server; it surfaces actionable warnings so you can fix the setup quickly.
