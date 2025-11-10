@@ -1,62 +1,61 @@
-
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const port = process.env.PORT || 3000;
-const root = process.cwd();
+const root = __dirname;
 
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval'",
-  "style-src 'self'",
-  "img-src 'self' blob: data:",
-  "worker-src 'self' blob:",
-  "connect-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'"
-].join('; ');
+try { require('./validateManifest.cjs').validate(); }
+catch (e) { console.warn('[manifest] validator warning:', e && e.message); }
 
-const server = http.createServer((req, res) => {
-  let urlPath = decodeURIComponent(req.url.split('?')[0]);
-  if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
-  const filePath = path.join(root, urlPath);
+http.createServer((req, res) => {
+  let reqPath = req.url.split('?')[0];
+  let filePath = path.join(root, reqPath);
+  if (reqPath === '/' || !path.extname(filePath)) filePath = path.join(root, 'index.html');
 
   fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.statusCode = 404;
-      res.end('Not Found');
-      return;
-    }
+    if (err) { res.writeHead(404); res.end('Not found'); return; }
 
     const ext = path.extname(filePath).toLowerCase();
-    const type = ({
-      '.html': 'text/html; charset=utf-8',
-      '.js': 'application/javascript; charset=utf-8',
-      '.mjs': 'application/javascript; charset=utf-8',
-      '.cjs': 'application/javascript; charset=utf-8',
-      '.css': 'text/css; charset=utf-8',
-      '.json': 'application/json; charset=utf-8',
-      '.wasm': 'application/wasm',
-      '.png': 'image/png',
-      '.webp': 'image/webp',
-      '.ico': 'image/x-icon'
-    })[ext] || 'application/octet-stream';
+    const mime =
+      {
+        '.html': 'text/html; charset=utf-8',
+        '.js':   'application/javascript; charset=utf-8',
+        '.mjs':  'application/javascript; charset=utf-8',
+        '.css':  'text/css; charset=utf-8',
+        '.wasm': 'application/wasm',
+        '.json': 'application/json; charset=utf-8',
+        '.ico':  'image/x-icon',
+        '.png':  'image/png',
+        '.webp': 'image/webp'
+      }[ext] || 'application/octet-stream';
 
+    res.setHeader('Content-Type', mime);
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-    res.setHeader('Content-Security-Policy', csp);
-    res.setHeader('Content-Type', type);
-    if (ext === '.wasm' || ext === '.js' || ext === '.mjs') {
+
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval'",
+        "style-src 'self'",
+        "img-src 'self' blob: data:",
+        "connect-src 'self'",
+        "worker-src 'self' blob:",
+        "media-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "frame-ancestors 'none'"
+      ].join('; ')
+    );
+
+    if (ext === '.wasm' || ext === '.js') {
       res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     }
 
     res.end(data);
   });
-});
-
-server.listen(port, () => {
-  console.log(`HTTP  ${new Date().toLocaleString()} listening on http://localhost:${port}`);
+}).listen(3000, () => {
+  console.log('COOP/COEP server running at http://localhost:3000');
 });
