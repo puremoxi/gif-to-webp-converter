@@ -42,7 +42,7 @@ async function processFile(file, { id, onProgress, settings }) {
 }
 
 const queue = createConversionQueue(processFile);
-(async ()_=>{
+(async () => {
   try{
     ffmpeg = await initFFmpeg();
     ffmpegReady=true; status.textContent='Converter ready. Please add files.';
