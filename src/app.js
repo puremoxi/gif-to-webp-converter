@@ -7,6 +7,9 @@ const dropzone=document.getElementById('dropzone'); const fileInput=document.get
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
 let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 
+// Map originals to UI ids for timing + resolution
+const fileToId = new WeakMap();
+
 (async () => {
   try{
     const r = await fetch('/vendor/css/tailwind.css', { cache: 'no-store' });
@@ -39,7 +42,18 @@ function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
     ffmpegReady=true; status.textContent='Converter ready. Please add files.'; updateStart();
   }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
 })();
-const queue=createConversionQueue(async (file,ctx)=> convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress));
+
+// Wrap conversion so we can time per-file and update UI around it
+const queue=createConversionQueue(async (file,ctx)=> {
+  const id = fileToId.get(file);
+  if (id!=null && window.UIExt?.markFileStartById) window.UIExt.markFileStartById(id);
+  const t0 = performance.now();
+  const out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
+  const elapsed = performance.now() - t0;
+  if (id!=null && window.UIExt?.markFileCompleteById) window.UIExt.markFileCompleteById(id, elapsed);
+  return out;
+});
+
 fileInput.addEventListener('change', async ()=>{
   const files=Array.from(fileInput.files || []);
   if(files.length) await handle(files);
@@ -53,11 +67,22 @@ dropzone.addEventListener('drop', async e=>{
   dropzone.addEventListener(n,e=>e.preventDefault());
   document.body.addEventListener(n,e=>e.preventDefault());
 });
+
 async function handle(files){
   const items=await queue.add(files); queued+=items.length; updateStart();
   for(const it of items){
+    // Map file to id so our conversion wrapper can locate its UI
+    fileToId.set(it.file, it.id);
+
     setPlaceholderThumbnail(it.id);
+
+    // Populate resolution in UI (closest to thumbnail, before FPS)
+    try { if (window.UIExt?.populateResolutionUIById) await window.UIExt.populateResolutionUIById(it.id, it.file); } catch {}
+
+    // Existing metadata (fps/duration/etc) via gifInfo -> ui module; leave as-is
     getGifInfo(it.file).then(info=>setItemMeta(it.id,info)).catch(()=>{});
+
+    // Build a small PNG thumb
     try{
       const url=URL.createObjectURL(it.file); const img=new Image(); img.src=url; await img.decode();
       const size=128; const ratio=(img.width||1)/(img.height||1); const w=Math.min(size,img.width||size); const h=Math.round(w/ratio);
@@ -66,6 +91,7 @@ async function handle(files){
     }catch{}
   }
 }
+
 async function getJSZip(){
   try {
     const mod = await import('/vendor/jszip.mjs');
@@ -76,15 +102,20 @@ async function getJSZip(){
     throw e;
   }
 }
+
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
+  // Batch timer start (aggregate)
+  if (window.UIExt?.markBatchStart) window.UIExt.markBatchStart(queued);
   const JSZip = await getJSZip();
-  await queue.run(()=>getSettings(), f=>converted.push(f));
+  await queue.run(()=>getSettings(), f=>{ converted.push(f); if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
   zipBtn.disabled=false; updateStart();
 });
+
 document.getElementById('clear-button').addEventListener('click', ()=>{
   queue.clear(); queued=0; updateStart(); status.textContent='Converter ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
 });
+
 document.getElementById('download-all').addEventListener('click', async ()=>{
   if(!converted.length) return;
   const JSZip = await getJSZip();
