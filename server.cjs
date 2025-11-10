@@ -38,7 +38,7 @@ http.createServer((req, res) => {
       'Content-Security-Policy',
       [
         "default-src 'self'",
-        "script-src 'self'",",
+        "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' blob: data:",
         "connect-src 'self'",
