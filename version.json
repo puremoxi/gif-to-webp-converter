@@ -2,9 +2,9 @@
   "schema_version": 1,
   "app": {
     "name": "gif-to-webp-converter",
-    "version": "3.6.4",
+    "version": "3.6.6",
     "mode": "multi-threaded",
-    "build_time_utc": "2025-11-09T22:50:56Z"
+    "build_time_utc": "2025-11-09T23:38:33Z"
   },
   "ffmpeg": {
     "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD, local)",
@@ -17,48 +17,5 @@
       "vendor/ffmpeg/ffmpeg-core.wasm",
       "vendor/ffmpeg/ffmpeg-core.worker.js"
     ]
-  },
-  "artifacts": [
-    {
-      "path": "index.html",
-      "size": 5182
-    },
-    {
-      "path": "server.cjs",
-      "size": 1017
-    },
-    {
-      "path": "README.md",
-      "size": 2879
-    },
-    {
-      "path": "CHANGELOG.md",
-      "size": 448
-    },
-    {
-      "path": "src/app.js",
-      "size": 3985
-    },
-    {
-      "path": "src/modules/ui.js",
-      "size": 4778
-    },
-    {
-      "path": "src/modules/ffmpegClient.js",
-      "size": 3094
-    },
-    {
-      "path": "src/modules/gifInfo.js",
-      "size": 1146
-    },
-    {
-      "path": "src/modules/queueManager.js",
-      "size": 1044
-    },
-    {
-      "path": "vendor/ffmpeg/README.txt",
-      "size": 842
-    }
-  ],
-  "changelog": "See CHANGELOG.md in the project root."
+  }
 }

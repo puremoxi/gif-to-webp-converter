@@ -4,10 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GIF → WebP Converter (FFmpeg MT)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .dropzone-active{border-color:#2563eb;background-color:#1e3a8a}
-  </style>
+  <link rel="stylesheet" href="/vendor/css/tailwind.css" />
+  <style>.dropzone-active{border-color:#2563eb;background-color:#1e3a8a}</style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
   <div class="max-w-5xl mx-auto">
@@ -16,6 +14,18 @@
       <p class="text-gray-400">Multi‑threaded FFmpeg WASM (core‑mt). Place all UMD files in <code>vendor/ffmpeg/</code>.</p>
     </header>
 
+    <!-- Tailwind check banner (hidden by default; shown if vendor/css/tailwind.css is missing or placeholder) -->
+    <div id="tw-banner" class="hidden max-w-3xl mx-auto mb-4 rounded-xl border border-amber-600/60 bg-amber-900/30 p-3">
+      <div class="flex items-start gap-3">
+        <div class="text-xl">🎨</div>
+        <div class="flex-1">
+          <div class="font-semibold">Local CSS not built yet</div>
+          <div class="text-sm text-amber-200/90">Run <code>npm run build:css</code> to generate <code>vendor/css/tailwind.css</code>.</div>
+        </div>
+        <button class="text-amber-200/80 hover:text-amber-100" onclick="document.getElementById('tw-banner').classList.add('hidden')">✕</button>
+      </div>
+    </div>
+
     <!-- FFmpeg loader banner -->
     <div id="ffmpeg-banner" class="max-w-3xl mx-auto mb-4 rounded-xl border border-slate-600 bg-slate-900/70 p-3 hidden">
       <div class="flex items-start gap-3">
@@ -23,7 +33,7 @@
         <div class="flex-1">
           <div id="ffmpeg-banner-title" class="font-semibold">Loading converter engine…</div>
           <div class="text-sm text-slate-300">
-            <span id="ffmpeg-banner-file">Preparing…</span> &middot;
+            <span id="ffmpeg-banner-file">Preparing…</span> ·
             <span id="ffmpeg-banner-count">0 / 3 complete</span>
           </div>
           <div class="mt-2 h-2 rounded bg-slate-800 overflow-hidden border border-slate-700">
@@ -82,14 +92,12 @@
     <div id="results" class="space-y-3"></div>
   </div>
 
-  <!-- Local UMD loader (brings window.FFmpeg / window.FFmpegWASM) -->
+  <!-- Local UMD loader -->
   <script src="/vendor/ffmpeg/ffmpeg.js"></script>
   <script>
-    // Bridge compatibility if needed
     if (window.FFmpegWASM && !window.FFmpeg) window.FFmpeg = window.FFmpegWASM;
     window.__FFMPEG_UMD_OK__ = !!(window.FFmpeg && window.FFmpeg.FFmpeg);
   </script>
-  <!-- App -->
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>

@@ -1,4 +1,3 @@
-// validateManifest.cjs — boot-time validation for version.json and vendor artifacts
 const fs = require('fs');
 const path = require('path');
 function toRegex(glob){ const esc=glob.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*'); return new RegExp('^'+esc+'$'); }

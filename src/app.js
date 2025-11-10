@@ -6,6 +6,23 @@ import { getGifInfo } from './modules/gifInfo.js';
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
 let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
+
+// --- Small functional update: warn if Tailwind CSS missing/placeholder
+(async () => {
+  try{
+    const r = await fetch('/vendor/css/tailwind.css', { cache: 'no-store' });
+    if(!r.ok){ document.getElementById('tw-banner')?.classList.remove('hidden'); console.warn('[css] vendor/css/tailwind.css not found'); }
+    else{
+      const text = await r.text();
+      if(/Build me via: npm run build:css/i.test(text) || text.trim().length < 64){
+        document.getElementById('tw-banner')?.classList.remove('hidden');
+        console.warn('[css] vendor/css/tailwind.css appears to be a placeholder; run npm run build:css');
+      }
+    }
+  }catch{ document.getElementById('tw-banner')?.classList.remove('hidden'); }
+})();
+// --------------------------------------------------------------------
+
 setupUI(dropzone,fileInput);
 function getSettings(){
   return {
