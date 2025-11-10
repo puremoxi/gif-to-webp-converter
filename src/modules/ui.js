@@ -21,52 +21,76 @@ export function setupUI(dropzone, fileInput){
     document.getElementById('tw-banner')?.classList.add('hidden');
   });
   document.getElementById('ffmpeg-banner-close')?.addEventListener('click', ()=>{
-    document.getElementById('ffmpeg-banner')?.classList.add('hidden');
+    bannerCtl.hide();
   });
 }
-export function addQueuedItem(id,name,size){
-  const r=document.getElementById('results');
-  const card=document.createElement('div');
-  card.className='bg-slate-900/70 border border-slate-700 rounded-xl p-3 space-y-2';
-  card.id='item-'+id;
-  card.innerHTML=`
-    <div class="flex justify-between items-center gap-3 flex-wrap">
-      <div class="flex items-center gap-3 min-w-[220px]">
-        <img id="thumb-${id}" alt="thumbnail" class="w-16 h-16 rounded-lg object-cover bg-gray-800 border border-slate-700"/>
-        <div>
-          <div class="font-semibold">${name}</div>
-          <div class="text-slate-400 text-sm">${(size/1024).toFixed(1)} KB</div>
-          <div id="meta-${id}" class="text-slate-400 text-xs mt-0.5"></div>
-        </div>
-      </div>
-      <div id="status-${id}" class="text-amber-400 font-semibold">Queued</div>
+function fmtSize(b){ if(b<1024) return b+' B'; if(b<1024*1024) return (b/1024).toFixed(1)+' KB'; return (b/1024/1024).toFixed(1)+' MB'; }
+function escape(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+export function addQueuedItem(id, name, size){
+  const el=document.createElement('div'); el.id=id; el.className='p-3 rounded-lg bg-gray-800/70 border border-gray-700/70';
+  el.innerHTML = `
+<div class="grid grid-cols-[1fr,auto] gap-3 items-center">
+  <div>
+    <div id="name-${id}" class="truncate font-semibold text-gray-200" title="${escape(name)}">${escape(name)}</div>
+    <div class="flex items-center gap-3">
+      <span id="status-${id}" class="text-sm text-amber-400">Queued</span>
+      <div class="w-full bg-gray-700 rounded h-1.5 border border-gray-900/50"><div id="bar-${id}" class="bg-blue-500 h-full rounded-sm" style="width:0%"></div></div>
     </div>
-    <div class="mt-2 w-full bg-gray-800 h-2 rounded-md overflow-hidden">
-      <div id="bar-${id}" class="h-2 w-0 bg-blue-500"></div>
-    </div>
-    <div id="actions-${id}" class="mt-2"></div>`;
-  r.appendChild(card);
+    <div id="time-${id}" class="text-xs text-gray-500 mt-0.5"></div>
+  </div>
+  <div class="text-sm text-gray-400 grid grid-cols-[auto,auto,auto,auto] gap-x-3 gap-y-0.5 items-center">
+    <span id="res-${id}">—</span>
+    <span>${fmtSize(size)}</span>
+    <span id="fps-${id}">—</span>
+    <span id="frames-${id}">—</span>
+  </div>
+  <div class="flex items-center justify-end gap-3" id="actions-${id}">
+    <button id="del-${id}" class="text-gray-500 hover:text-red-500 text-lg leading-none" title="Remove">✕</button>
+  </div>
+</div>`;
+  document.getElementById('results').appendChild(el);
+  document.getElementById('del-'+id).addEventListener('click', ()=>el.remove());
 }
 export function setPlaceholderThumbnail(id){
-  const img=document.getElementById('thumb-'+id); if(!img) return;
-  const c=document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d'); ctx.fillStyle='#1f2937'; ctx.fillRect(0,0,64,64); img.src=c.toDataURL('image/png');
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#4b5563'; ctx.fillRect(0,0,64,64);
+  setItemThumbnail(id, c.toDataURL());
 }
-export function setItemThumbnail(id,url){ const img=document.getElementById('thumb-'+id); if(img) img.src=url; }
-export function setItemMeta(id,info){ const m=document.getElementById('meta-'+id); if(!m) return; const fps=info.fps?info.fps.toFixed(2)+' fps':'—'; const fr=info.frames?String(info.frames).padStart(4,'0'):'0000'; const kind=info.animated?'animation sequence':'still image'; m.textContent=`${fps} • ${fr} frames • ${kind}`; }
+export function setItemThumbnail(id,url){
+  const el=document.getElementById('name-'+id);
+  if(el){
+    const img=new Image(64,64); img.src=url; img.className='w-16 h-16 rounded-md object-contain bg-gray-700/50';
+    el.parentElement.parentElement.classList.replace('grid-cols-[1fr,auto]','grid-cols-[auto,1fr,auto]');
+    el.parentElement.parentElement.prepend(img);
+  }
+}
+export function setItemMeta(id,meta){
+  const fps=document.getElementById('fps-'+id), frames=document.getElementById('frames-'+id);
+  if(fps) fps.textContent = meta.fps ? `${meta.fps} fps` : '—';
+  if(frames) frames.textContent = meta.frames ? `${meta.frames} fr` : '—';
+}
+export function setItemResolution(id, w, h) {
+  const el = document.getElementById(`res-${id}`);
+  if (el) el.textContent = `${w}\u00D7${h}`;
+}
 export function updateItemProgress(id,ratio){
-  const b=document.getElementById('bar-'+id), s=document.getElementById('status-'+id);
+  const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id);
   if(b) b.style.width=Math.round(ratio*100)+'%';
-  if(s){ s.textContent='Processing '+Math.round(ratio*100)+'%'; s.classList.remove('text-amber-400'); s.classList.add('text-blue-400'); }
+  if(s && s.textContent==='Queued'){ s.textContent='Processing…'; s.classList.remove('text-amber-400'); s.classList.add('text-blue-400'); }
 }
-export function setItemConverted(id,blob,name){
+export function setItemConverted(id,blob,name, duration){
   const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id);
+  const t = document.getElementById(`time-${id}`);
   if(b) b.style.width='100%';
   if(s){ s.textContent='Converted'; s.classList.remove('text-blue-400'); s.classList.add('text-green-500'); }
   if(a){ const link=document.createElement('a'); link.textContent='Download'; link.href=URL.createObjectURL(blob); link.download=name; link.className='text-blue-400 font-semibold hover:underline mr-3'; a.innerHTML=''; a.appendChild(link); }
+  if (t) { t.textContent = `Done in ${duration.toFixed(2)}s`; t.classList.add('text-green-400'); }
 }
-export function setItemError(id,msg){
+export function setItemError(id,msg, duration){
   const s=document.getElementById('status-'+id);
+  const t = document.getElementById(`time-${id}`);
   if(s){ s.textContent=msg||'Error'; s.classList.remove('text-blue-400','text-amber-400'); s.classList.add('text-red-500'); }
+  if (t) { t.textContent = `${msg||'Error'} in ${duration.toFixed(2)}s`; t.classList.add('text-red-400'); }
 }
 export const bannerCtl = {
   show(){ document.getElementById('ffmpeg-banner')?.classList.remove('hidden'); },
@@ -76,8 +100,11 @@ export const bannerCtl = {
     const c=document.getElementById('ffmpeg-banner-count');
     const bar=document.getElementById('ffmpeg-banner-bar');
     if(f) f.textContent=label;
-    if(c) c.textContent=`${(step-1<0?0:step-1)} / ${total} complete`;
-    if(bar) bar.style.width='0%';
-  }
+    if(c) c.textContent=`${step} / ${total} complete`;
+    if(bar) pct(step/total*100);
+  },
 };
-export function pct(p){ const bar=document.getElementById('ffmpeg-banner-bar'); if(bar) bar.style.width=Math.round(p)+'%'; }
+export function pct(p){
+  const bar=document.getElementById('ffmpeg-banner-bar');
+  if(bar) bar.style.width = `${Math.max(0,Math.min(100,p))}%`;
+}

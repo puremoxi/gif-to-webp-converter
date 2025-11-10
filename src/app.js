@@ -1,4 +1,4 @@
-import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta } from './modules/ui.js';
+import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta, setItemResolution, setItemError } from './modules/ui.js';
 import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
 import { createConversionQueue } from './modules/queueManager.js';
 import { getGifInfo } from './modules/gifInfo.js';
@@ -24,43 +24,47 @@ let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 setupUI(dropzone,fileInput);
 function getSettings(){
   return {
-    quality: parseInt(document.getElementById('quality').value,10)||90,
-    compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
+    quality: Number(document.getElementById('quality').value) || 90,
+    compressionLevel: Number(document.getElementById('compression-level').value) || 6,
     loop: document.getElementById('loop-toggle').checked,
     still: document.getElementById('still-toggle').checked,
     lossless: document.getElementById('lossless-toggle').checked,
-    mixed: document.getElementById('mixed-toggle').checked
-  };
+    mixed: document.getElementById('mixed-toggle').checked,
+  }
 }
-function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
-(async()=>{
+function updateStart(){
+  startBtn.disabled = (queued === 0) || !ffmpegReady || queue.isProcessing();
+  startBtn.textContent = queue.isProcessing() ? 'Processing...' : 'Start Conversion';
+}
+async function processFile(file, { id, onProgress, settings }) {
+  const out = await convertToWebP(ffmpeg, file, settings, (r) => onProgress(r));
+  return { ...out, id };
+}
+
+const queue = createConversionQueue(processFile);
+(async ()_=>{
   try{
-    ffmpeg=await initFFmpeg();
-    ffmpegReady=true; status.textContent='Converter ready. Please add files.'; updateStart();
-  }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
+    ffmpeg = await initFFmpeg();
+    ffmpegReady=true; status.textContent='Converter ready. Please add files.';
+  }catch(e){
+    console.error(e); status.textContent='Failed to load FFmpeg. Please reload.';
+  }
+  updateStart();
 })();
-const queue=createConversionQueue(async (file,ctx)=> convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress));
-fileInput.addEventListener('change', async ()=>{
-  const files=Array.from(fileInput.files || []);
-  if(files.length) await handle(files);
-});
-dropzone.addEventListener('drop', async e=>{
-  e.preventDefault();
-  const files=Array.from(e.dataTransfer?.files || []);
-  if(files.length) await handle(files);
-});
-['dragenter','dragover','dragleave'].forEach(n=>{
-  dropzone.addEventListener(n,e=>e.preventDefault());
-  document.body.addEventListener(n,e=>e.preventDefault());
-});
-async function handle(files){
-  const items=await queue.add(files); queued+=items.length; updateStart();
+
+dropzone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+async function handleFiles(files){
+  const items = await queue.add(Array.from(files));
+  queued += items.length; updateStart();
   for(const it of items){
     setPlaceholderThumbnail(it.id);
-    getGifInfo(it.file).then(info=>setItemMeta(it.id,info)).catch(()=>{});
     try{
-      const url=URL.createObjectURL(it.file); const img=new Image(); img.src=url; await img.decode();
-      const size=128; const ratio=(img.width||1)/(img.height||1); const w=Math.min(size,img.width||size); const h=Math.round(w/ratio);
+      const info = await getGifInfo(it.file);
+      setItemMeta(it.id, info);
+    }catch{}
+    try{ // Get resolution
+      const img=new Image(), url=URL.createObjectURL(it.file); await new Promise((rs,rj)=>{ img.onload=rs; img.onerror=rj; img.src=url; }); const {naturalWidth:w, naturalHeight:h}=img; setItemResolution(it.id,w,h);
       const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
       const blob=await new Promise(res=>c.toBlob(res,'image/png')); if(blob) setItemThumbnail(it.id,URL.createObjectURL(blob));
     }catch{}
@@ -78,9 +82,13 @@ async function getJSZip(){
 }
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
+  status.textContent='Processing...';
+  const totalStartTime = performance.now();
   const JSZip = await getJSZip();
   await queue.run(()=>getSettings(), f=>converted.push(f));
-  zipBtn.disabled=false; updateStart();
+  const totalDuration = (performance.now() - totalStartTime) / 1000;
+  zipBtn.disabled=converted.length === 0; updateStart();
+  status.textContent = `Converted ${converted.length} file(s) in ${totalDuration.toFixed(2)}s.`;
 });
 document.getElementById('clear-button').addEventListener('click', ()=>{
   queue.clear(); queued=0; updateStart(); status.textContent='Converter ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
@@ -89,6 +97,6 @@ document.getElementById('download-all').addEventListener('click', async ()=>{
   if(!converted.length) return;
   const JSZip = await getJSZip();
   const zip=new JSZip(); for(const f of converted){ zip.file(f.name, await f.blob.arrayBuffer()); }
-  const blob=await zip.generateAsync({type:'blob'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='converted_webp_files.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='converted-webp.zip'; a.click(); a.remove(); URL.revokeObjectURL(url);
 });
