@@ -37,7 +37,6 @@ export function setItemError(id,msg){ const s=document.getElementById('status-'+
 export const bannerCtl = {
   show(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.remove('hidden'); },
   hide(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.add('hidden'); },
-  step(step,total,label){ const f=document.getElementById('ffmpeg-banner-file'); const c=document.getElementById('ffmpeg-banner-count'); const bar=document.getElementById('ffmpeg-banner-bar'); if(f) f.textContent=label; if(c) c.textContent=`${max0(step-1)} / ${total} complete`; if(bar) bar.style.width='0%'; }
+  step(step,total,label){ const f=document.getElementById('ffmpeg-banner-file'); const c=document.getElementById('ffmpeg-banner-count'); const bar=document.getElementById('ffmpeg-banner-bar'); if(f) f.textContent=label; if(c) c.textContent=`${(step-1<0?0:step-1)} / ${total} complete`; if(bar) bar.style.width='0%'; }
 };
-function max0(n){ return n<0?0:n; }
 export function pct(p){ const bar=document.getElementById('ffmpeg-banner-bar'); if(bar) bar.style.width=Math.round(p)+'%'; }

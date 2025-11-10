@@ -1,20 +1,26 @@
 
-# GIF → WebP Converter — v3.6.4 (Option A, Multi‑Thread)
+# GIF → WebP Converter — v3.6.6 (Option A, Multi‑Thread)
 
 > **Important (Option A — Recommended):**  
 > Serve **both** the multi-threaded engine (**@ffmpeg/core-mt@0.12.6**) and the loader (**@ffmpeg/ffmpeg@0.12.10**) **locally** from `vendor/ffmpeg/` — including the loader’s `*.ffmpeg.js` chunks.
 
+## 🆕 What’s New in v3.6.6
+- Added a **runtime check** that warns if `vendor/css/tailwind.css` is missing or still a placeholder (shows a small banner with a tip to run `npm run build:css`).
+- README Quick Start now explicitly includes the Tailwind build step.
+- Version bumped; changelog updated.
+
 ## Before You Begin (Windows / PowerShell)
 ```powershell
-# Open PowerShell in your project root (folder with index.html)
 cd $HOME\OneDrive\Documents\GitHub\gif-to-webp-converter\
-
-# If PowerShell blocks scripts in this session
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
 ## ⚡ Quick Start (Option A — Local UMD for Loader + Engine)
 ```powershell
+# 0) Build local CSS (Fix A)
+npm i -D tailwindcss@3 postcss autoprefixer
+npm run build:css
+
 # 1) Multi-threaded core (engine)
 npm init -y
 npm pack @ffmpeg/core-mt@0.12.6
@@ -24,7 +30,7 @@ rmdir /S /Q .\package
 
 # 2) Loader (ffmpeg.js + chunks)
 npm pack @ffmpeg/ffmpeg@0.12.10
-tar -xf .\ffmpeg-0.12.10.tgz
+tar -xf .\ffmpeg-ffmpeg-0.12.10.tgz
 robocopy .\package\dist\umd .\vendor\ffmpeg *.* /E /NJH /NJS
 rmdir /S /Q .\package
 
@@ -35,20 +41,31 @@ dir .\vendor\ffmpeg\*.ffmpeg.js
 
 Run the server with COOP/COEP headers:
 ```bash
-node server.cjs
+npm run serve
+# http://localhost:3000
 ```
-Open http://localhost:3000 and check DevTools → Network:
-- `ffmpeg-core.worker.js`, `ffmpeg-core.js`, `ffmpeg-core.wasm` → **200**
-- Multiple `*.ffmpeg.js` chunk files → **200**
-- Loader banner reaches “Converter ready. Please add files.”
+
+---
+## 🎨 Self-hosted Tailwind (Fix A — Recommended)
+To avoid COEP/CSP issues, Tailwind is **built locally** and served from `/vendor/css/tailwind.css`.
+
+```powershell
+npm i -D tailwindcss@3 postcss autoprefixer
+npm run build:css
+```
+`styles/input.css` → `vendor/css/tailwind.css`. `index.html` already links it.
 
 ---
 ## 🧾 Version Manifest Schema (`version.json`)
-
 ```jsonc
 {
   "schema_version": 1,
-  "app": { "name": "gif-to-webp-converter", "version": "3.6.4", "mode": "multi-threaded", "build_time_utc": "..." },
+  "app": {
+    "name": "gif-to-webp-converter",
+    "version": "3.6.6",
+    "mode": "multi-threaded",
+    "build_time_utc": "2025-11-09T23:38:33Z"
+  },
   "ffmpeg": {
     "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD, local)",
     "core": "@ffmpeg/core-mt@0.12.6 (UMD, local)",
@@ -60,9 +77,7 @@ Open http://localhost:3000 and check DevTools → Network:
       "vendor/ffmpeg/ffmpeg-core.wasm",
       "vendor/ffmpeg/ffmpeg-core.worker.js"
     ]
-  },
-  "artifacts": [ { "path": "index.html", "size": 0, "sha256": "…" } ],
-  "changelog": "See CHANGELOG.md"
+  }
 }
 ```
 
@@ -71,7 +86,7 @@ Open http://localhost:3000 and check DevTools → Network:
 ```text
 gif-to-webp-converter/
 ├─ index.html
-├─ server.cjs                   # COOP/COEP headers
+├─ server.cjs
 ├─ package.json
 ├─ validateManifest.cjs
 ├─ README.md
@@ -79,6 +94,8 @@ gif-to-webp-converter/
 ├─ version.json
 │
 ├─ vendor/
+│  ├─ css/
+│  │  └─ tailwind.css        # built by npm run build:css
 │  └─ ffmpeg/
 │     ├─ ffmpeg.js
 │     ├─ ffmpeg-core.js

@@ -1,5 +1,4 @@
 import { bannerCtl, pct } from './ui.js';
-
 function getFFGlobal(){
   const g = (window.FFmpeg || window.FFmpegWASM);
   if(!g) return { ok:false, reason:'FFmpeg global missing (FFmpeg/FFmpegWASM)' };

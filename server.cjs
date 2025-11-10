@@ -11,8 +11,11 @@ http.createServer((req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const map = { '.html':'text/html', '.js':'application/javascript', '.wasm':'application/wasm', '.css':'text/css' };
     res.setHeader('Content-Type', map[ext] || 'application/octet-stream');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    // Security headers
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');         // COOP
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');      // COEP
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');       // CORP
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; media-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
     res.end(data);
   });
 }).listen(3000, () => console.log('COOP/COEP server on http://localhost:3000'));
