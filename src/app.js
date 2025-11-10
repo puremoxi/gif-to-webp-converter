@@ -66,9 +66,19 @@ async function handle(files){
     }catch{}
   }
 }
+async function getJSZip(){
+  try {
+    const mod = await import('/vendor/jszip.mjs');
+    return mod.default;
+  } catch (e) {
+    console.error('[zip] JSZip missing. See README (self-hosted JSZip).', e);
+    alert('JSZip not found. See README: place jszip.min.js at vendor/jszip and keep vendor/jszip.mjs.');
+    throw e;
+  }
+}
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
-  const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+  const JSZip = await getJSZip();
   await queue.run(()=>getSettings(), f=>converted.push(f));
   zipBtn.disabled=false; updateStart();
 });
@@ -77,7 +87,7 @@ document.getElementById('clear-button').addEventListener('click', ()=>{
 });
 document.getElementById('download-all').addEventListener('click', async ()=>{
   if(!converted.length) return;
-  const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+  const JSZip = await getJSZip();
   const zip=new JSZip(); for(const f of converted){ zip.file(f.name, await f.blob.arrayBuffer()); }
   const blob=await zip.generateAsync({type:'blob'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='converted_webp_files.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
