@@ -1,6 +1,6 @@
 # 🧾 GIF → WebP Converter — Changelog
 
-## v3.6.6 — 2025-11-09
-- Runtime check for Tailwind build: shows a banner if `vendor/css/tailwind.css` is missing/placeholder.
-- README Quick Start updated to include Tailwind build step.
-- Documentation polish and version bump.
+## v3.6.7 — 2025-11-10
+- Strict CSP: removed inline styles/scripts; externalized FFmpeg bridge to /src/boot.js.
+- CSP: allow WebAssembly via 'wasm-unsafe-eval'; style-src 'self'.
+- README updated with CSP guidance.

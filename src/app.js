@@ -7,7 +7,6 @@ const dropzone=document.getElementById('dropzone'); const fileInput=document.get
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
 let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 
-// --- Small functional update: warn if Tailwind CSS missing/placeholder
 (async () => {
   try{
     const r = await fetch('/vendor/css/tailwind.css', { cache: 'no-store' });
@@ -21,7 +20,6 @@ let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
     }
   }catch{ document.getElementById('tw-banner')?.classList.remove('hidden'); }
 })();
-// --------------------------------------------------------------------
 
 setupUI(dropzone,fileInput);
 function getSettings(){
