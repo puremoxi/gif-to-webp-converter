@@ -1,6 +1,6 @@
 {
   "name": "gif-to-webp-converter",
-  "version": "3.6.12-1",
+  "version": "3.6.12-2",
   "private": true,
   "type": "module",
   "scripts": {
