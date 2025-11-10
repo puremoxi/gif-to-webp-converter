@@ -1,5 +1,7 @@
 # Changelog
 
-## v3.6.12-2 — 2025-11-10
-- Include README.md in the archive explicitly.
-- Carry over v3.6.12-1 fixes (cache-bust, wireSaveButtons export, vendor/jszip folder-by-default).
+## v3.6.13 — 2025-11-10
+- Full export guarantee: includes **all app files** and **all folders** every time.
+- Restored `src/` tree (app + modules).
+- README expanded (full Quick Start, hierarchy, CSP notes, troubleshooting).
+- Ensured `vendor/jszip/` exists (empty except placeholder) in the archive.
