@@ -9,7 +9,7 @@
   </head>
   <body class="bg-slate-950 text-slate-100 min-h-screen">
     <div class="max-w-6xl mx-auto p-6">
-      <header class="mb-6">
+      <header class="mb-6 text-center">
         <h1 class="text-2xl md:text-3xl font-bold">GIF → WebP Converter</h1>
         <p class="text-slate-300 mt-1">Please refer to README for proper installation of this tool.</p>
         <p class="text-xs text-slate-400 mt-1">Multi-threaded FFmpeg (WASM), strict CSP, all-local processing.</p>
@@ -39,7 +39,7 @@
         <p id="converter-status" class="text-slate-300 mt-2">Initializing…</p>
       </div>
 
-      <div class="mt-6 flex flex-wrap gap-3 items-center">
+      <div class="mt-6 flex flex-wrap gap-3 items-center justify-center">
         <button id="start-button" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded" disabled>Start Conversion</button>
         <button id="clear-button" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded">Clear Queue</button>
         <button id="download-all" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded" disabled>Download ZIP</button>
@@ -48,7 +48,7 @@
       <section class="mt-6 space-y-3">
         <details class="bg-slate-900/70 border border-slate-800 rounded-lg p-4">
           <summary class="cursor-pointer font-semibold">Advanced</summary>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div class="grid grid-cols-1 gap-4 mt-4">
             <div>
               <label class="block text-sm font-medium mb-1" for="quality">WebP Quality</label>
               <input id="quality" type="range" min="0" max="100" value="90" class="w-full" />
@@ -81,6 +81,6 @@
 
     <script src="/vendor/ffmpeg/ffmpeg.js" defer></script>
     <script src="/vendor/jszip/jszip.min.js" defer></script>
-    <script type="module" src="/src/app.js?v=3.6.13"></script>
+    <script type="module" src="/src/app.js?v=3.6.15"></script>
   </body>
 </html>
