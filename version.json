@@ -1,8 +1,8 @@
 {
   "app": {
     "name": "gif-to-webp-converter",
-    "version": "3.6.12",
-    "build_time_utc": "2025-11-10T07:16:29Z"
+    "version": "3.6.12-1",
+    "build_time_utc": "2025-11-10T07:40:00Z"
   },
   "vendor": {
     "ffmpeg": {

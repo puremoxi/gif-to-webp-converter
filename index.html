@@ -49,7 +49,7 @@
         <button id="download-all" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded" disabled>Download ZIP</button>
       </div>
 
-      <!-- Advanced (already integrated elsewhere) -->
+      <!-- Advanced -->
       <section class="mt-6 space-y-3">
         <details class="bg-slate-900/70 border border-slate-800 rounded-lg p-4">
           <summary class="cursor-pointer font-semibold">Advanced</summary>
@@ -88,7 +88,7 @@
     <!-- Self-hosted vendor scripts -->
     <script src="/vendor/ffmpeg/ffmpeg.js" defer></script>
     <script src="/vendor/jszip/jszip.min.js" defer></script>
-    <!-- App -->
-    <script type="module" src="/src/app.js"></script>
+    <!-- App (cache-busted) -->
+    <script type="module" src="/src/app.js?v=3.6.12-1"></script>
   </body>
 </html>
