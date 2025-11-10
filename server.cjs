@@ -29,7 +29,6 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    // basic type map
     const ext = path.extname(filePath).toLowerCase();
     const type = ({
       '.html': 'text/html; charset=utf-8',
@@ -44,14 +43,11 @@ const server = http.createServer((req, res) => {
       '.ico': 'image/x-icon'
     })[ext] || 'application/octet-stream';
 
-    // headers
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     res.setHeader('Content-Security-Policy', csp);
     res.setHeader('Content-Type', type);
-
-    // wasm must have CORP when COEP is enabled
     if (ext === '.wasm' || ext === '.js' || ext === '.mjs') {
       res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     }
