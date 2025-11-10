@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+
 function toRegex(glob){ const esc=glob.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*'); return new RegExp('^'+esc+'$'); }
 function listFilesRecursive(dir){ const out=[]; if(!fs.existsSync(dir)) return out; const st=fs.statSync(dir); if(st.isFile()) return [dir]; const stack=[dir]; while(stack.length){ const d=stack.pop(); for(const n of fs.readdirSync(d)){ const p=path.join(d,n); const s=fs.statSync(p); if(s.isDirectory()) stack.push(p); else out.push(p); } } return out; }
+
 function validate(){
   const root=__dirname; const manifestPath=path.join(root,'version.json'); const vendorDir=path.join(root,'vendor','ffmpeg');
   if(!fs.existsSync(manifestPath)){ console.warn('[manifest] version.json not found — skipping validation.'); return; }

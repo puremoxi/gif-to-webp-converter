@@ -25,18 +25,13 @@ export async function initFFmpeg(opts={}){
   if(!d.ok) throw new Error(`FFmpeg library not available: ${d.reason}. Check vendor/ffmpeg/ffmpeg.js and script order.`);
   const ffmpeg=new d.Ctor();
   const base="/vendor/ffmpeg";
-  const urls={
-    coreURL:   `${base}/ffmpeg-core.js`,
-    wasmURL:   `${base}/ffmpeg-core.wasm`,
-    workerURL: `${base}/ffmpeg-core.worker.js`
-  };
+  const urls={ coreURL:`${base}/ffmpeg-core.js`, wasmURL:`${base}/ffmpeg-core.wasm`, workerURL:`${base}/ffmpeg-core.worker.js` };
   bannerCtl.show();
   try{
     bannerCtl.step(1,3,'ffmpeg-core.js'); pct(100);
     bannerCtl.step(2,3,'ffmpeg-core.wasm'); pct(100);
     bannerCtl.step(3,3,'ffmpeg-core.worker.js'); pct(0);
-    await ffmpeg.load(urls);
-    pct(100);
+    await ffmpeg.load(urls); pct(100);
   } finally { setTimeout(()=>bannerCtl.hide(), 400); }
   const maybeFetchFile = (d.g && d.g.fetchFile) || null;
   ffmpeg.fetchFile = (typeof maybeFetchFile === 'function') ? maybeFetchFile : polyfillFetchFile;

@@ -1,6 +1,5 @@
 # 🧾 GIF → WebP Converter — Changelog
 
-## v3.6.7 — 2025-11-10
-- Strict CSP: removed inline styles/scripts; externalized FFmpeg bridge to /src/boot.js.
-- CSP: allow WebAssembly via 'wasm-unsafe-eval'; style-src 'self'.
-- README updated with CSP guidance.
+## v3.6.9 — 2025-11-10
+- Included full app files plus `vendor/ffmpeg/` folder with `README.txt` placeholder so users always see where to drop FFmpeg UMD/core files.
+- Maintains strict CSP and self-hosted JSZip flow.

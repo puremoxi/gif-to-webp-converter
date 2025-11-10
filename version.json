@@ -2,9 +2,9 @@
   "schema_version": 1,
   "app": {
     "name": "gif-to-webp-converter",
-    "version": "3.6.7",
+    "version": "3.6.9",
     "mode": "multi-threaded",
-    "build_time_utc": "2025-11-10T00:44:23Z"
+    "build_time_utc": "2025-11-10T04:13:00Z"
   },
   "ffmpeg": {
     "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD, local)",
