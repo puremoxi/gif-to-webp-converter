@@ -1,21 +1,25 @@
 {
-  "schema_version": 1,
   "app": {
     "name": "gif-to-webp-converter",
-    "version": "3.6.11",
-    "mode": "multi-threaded",
-    "build_time_utc": "2025-11-10T05:01:47Z"
+    "version": "3.6.12",
+    "build_time_utc": "2025-11-10T07:16:29Z"
   },
-  "ffmpeg": {
-    "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD, local)",
-    "core": "@ffmpeg/core-mt@0.12.6 (UMD, local)",
-    "requires_coop_coep": true,
-    "required_vendor_artifacts": [
-      "vendor/ffmpeg/ffmpeg.js",
-      "vendor/ffmpeg/*.ffmpeg.js",
-      "vendor/ffmpeg/ffmpeg-core.js",
-      "vendor/ffmpeg/ffmpeg-core.wasm",
-      "vendor/ffmpeg/ffmpeg-core.worker.js"
-    ]
+  "vendor": {
+    "ffmpeg": {
+      "loader": "@ffmpeg/ffmpeg@0.12.10",
+      "core": "@ffmpeg/core-mt@0.12.6",
+      "files": [
+        "ffmpeg.js",
+        "ffmpeg-core.js",
+        "ffmpeg-core.wasm",
+        "ffmpeg-core.worker.js"
+      ]
+    },
+    "jszip": {
+      "version": "3.10.1",
+      "files": [
+        "jszip.min.js"
+      ]
+    }
   }
 }
