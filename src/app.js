@@ -44,7 +44,6 @@ function getSettings(){
 
 function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
 
-// Boot FFmpeg
 (async()=>{
   try{
     ffmpeg=await initFFmpeg();
@@ -160,7 +159,6 @@ async function saveZipWithPicker(blob, suggestedName){
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
   await queue.run(()=>getSettings(), f=>converted.push(f));
-  // wire picker-first buttons per item
   for(const f of converted){
     wireSaveButtons(f.id, f.blob, f.name, saveFileWithPicker);
   }

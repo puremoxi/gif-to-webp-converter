@@ -68,7 +68,6 @@ export async function initFFmpeg(){
     bannerCtl.hide();
   }
 
-  // attach fetchFile (prefer library util)
   ffmpeg.fetchFile = FF_fetchFile() || (async function polyfillFetchFile(src){
     if(src instanceof Blob){
       const buf=await src.arrayBuffer(); return new Uint8Array(buf);

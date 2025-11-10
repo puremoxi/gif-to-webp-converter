@@ -1,4 +1,3 @@
-// ESM shim for self-hosted JSZip under strict CSP.
-// Ensure /vendor/jszip/jszip.min.js is included via <script src="/vendor/jszip/jszip.min.js" defer></script> in index.html.
+// ESM shim for strict CSP; re-exports window.JSZip which you self-host.
 const JSZip = window.JSZip;
 export default JSZip;
