@@ -1,5 +1,21 @@
 {
-  "version": "3.6.9",
-  "build": "full-export-esm-strict-csp",
-  "date": "2025-11-10"
+  "schema_version": 1,
+  "app": {
+    "name": "gif-to-webp-converter",
+    "version": "3.6.9",
+    "mode": "multi-threaded",
+    "build_time_utc": "2025-11-10T04:13:00Z"
+  },
+  "ffmpeg": {
+    "loader": "@ffmpeg/ffmpeg@0.12.10 (UMD, local)",
+    "core": "@ffmpeg/core-mt@0.12.6 (UMD, local)",
+    "requires_coop_coep": true,
+    "required_vendor_artifacts": [
+      "vendor/ffmpeg/ffmpeg.js",
+      "vendor/ffmpeg/*.ffmpeg.js",
+      "vendor/ffmpeg/ffmpeg-core.js",
+      "vendor/ffmpeg/ffmpeg-core.wasm",
+      "vendor/ffmpeg/ffmpeg-core.worker.js"
+    ]
+  }
 }
