@@ -1,3 +1,4 @@
+
 import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta, wireSaveButtons } from './modules/ui.js';
 import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
 import { createConversionQueue } from './modules/queueManager.js';
@@ -20,7 +21,7 @@ const converted=[];
     if(!r.ok){ document.getElementById('tw-banner')?.classList.remove('hidden'); }
     else{
       const text = await r.text();
-      if(/Build me via: npm run build:css/i.test(text) || text.trim().length < 64){
+      if(/Built by: npm run build:css/i.test(text) || text.trim().length < 64){
         document.getElementById('tw-banner')?.classList.remove('hidden');
       }
     }

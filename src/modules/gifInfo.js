@@ -1,3 +1,4 @@
+
 export async function getGifInfo(file){
   const ab = await file.arrayBuffer();
   const bytes = new Uint8Array(ab);

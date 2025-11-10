@@ -1,4 +1,4 @@
-# GIF → WebP Converter — v3.6.13 (Option A, Multi‑Thread, Strict CSP)
+# GIF → WebP Converter — v3.6.15 (Option A, Multi‑Thread, Strict CSP)
 
 **Strict CSP build**: No inline scripts or styles. WebAssembly allowed via `'wasm-unsafe-eval'`. Tailwind and JSZip are self‑hosted.
 
@@ -35,7 +35,7 @@ tar -xf .\jszip-3.10.1.tgz
 robocopy .\package\dist .\vendor\jszip jszip.min.js /NJH /NJS
 rmdir /S /Q .\package
 
-# Validate (optional)
+# Validate manifest + vendor/ffmpeg
 npm run validate
 
 # Run (strict CSP + COOP/COEP)
@@ -47,20 +47,20 @@ npm run serve
 Open: `http://localhost:3000`.
 
 ### What this tool does
-- Converts **GIF → WebP** (animated and still), locally in your browser via FFmpeg WASM.  
-- Attempts **large file‑size reduction** with controllable quality settings.  
-- Shows **source metadata** in queue: thumbnail, **resolution (first)**, FPS, frame count, and whether it’s an animation or still.  
-- Processes **multiple files** in parallel.  
-- Lets you **save each file** (picker‑first when supported) or **download a ZIP** of all results.
+- Converts GIF → WebP (animated and still) locally in your browser via FFmpeg WASM.
+- Size reduction via quality and compression-level controls.
+- Shows source metadata in queue: thumbnail, **resolution (first)**, FPS, frame count, and whether it’s an animation or still.
+- Parallel conversion via Promise.all().
+- Save each file with a picker-first “Save as…” (when supported) or download a ZIP of all results.
 
 ### Choosing download locations
-- On Chromium desktop (Chrome/Edge) at `http://localhost`, the File System Access API allows picker dialogs (“**Save as…**”).  
+- On Chromium desktop (Chrome/Edge) at `http://localhost`, the File System Access API allows picker dialogs (“Save as…”).
 - Other browsers fall back to normal downloads (usually your Downloads folder).
 
 ---
 
 ## Version Manifest Schema
-`version.json` is validated on boot by `validateManifest.cjs` (warnings only).
+`version.json` is validated on boot by `validateManifest.cjs` (now also validates vendor FFmpeg files).
 
 ---
 
@@ -123,8 +123,3 @@ Server sets:
 - **JSZip missing**: An alert appears when creating a ZIP. Follow JSZip steps above.  
 - **Tailwind not built**: A yellow banner appears — run `npm run build:css`.  
 - **Picker not shown**: Some browsers don’t support File System Access API; the app will fall back to standard downloads.
-
----
-
-## Notes on optional loader chunks
-Depending on the `@ffmpeg/ffmpeg` version, you may see additional chunk files (like `814.ffmpeg.js`) under `vendor/ffmpeg/`. Those are normal and loaded automatically by the loader. Their presence is not required in every version.
