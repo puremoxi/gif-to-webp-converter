@@ -1,15 +1,16 @@
 {
   "name": "gif-to-webp-converter",
   "version": "3.6.9",
+  "private": true,
   "type": "commonjs",
   "scripts": {
     "serve": "node server.cjs",
-    "build:css": "npx tailwindcss -i ./styles/input.css -o ./vendor/css/tailwind.css --minify",
-    "validate": "node validateManifest.cjs"
+    "validate": "node -e \"require('./validateManifest.cjs').validate()\"",
+    "build:css": "tailwindcss -i styles/input.css -o vendor/css/tailwind.css --minify"
   },
   "devDependencies": {
-    "tailwindcss": "3",
-    "postcss": "^8.4.33",
-    "autoprefixer": "^10.4.19"
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18"
   }
 }
