@@ -3,26 +3,48 @@ export function setupUI(dropzone, fileInput){
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
   const loss=document.getElementById('lossless-toggle'), mix=document.getElementById('mixed-toggle');
   const loop=document.getElementById('loop-toggle'), still=document.getElementById('still-toggle');
+
   q.addEventListener('input',()=>{ qv.textContent=String(q.value) });
   cl.addEventListener('input',()=>{ clv.textContent=String(cl.value) });
+
   function sync(){ mix.disabled=loss.checked; if(loss.checked) mix.checked=false; still.disabled=loop.checked; if(loop.checked) still.checked=false; }
   loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
+
   ['dragenter','dragover','dragleave','drop'].forEach(n=>{
     dropzone.addEventListener(n,e=>e.preventDefault(),false);
     document.body.addEventListener(n,e=>e.preventDefault(),false);
   });
   ['dragenter','dragover'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.add('dropzone-active')));
   ['dragleave','drop'].forEach(n=>dropzone.addEventListener(n,()=>dropzone.classList.remove('dropzone-active')));
+
+  document.getElementById('tw-banner-close')?.addEventListener('click', ()=>{
+    document.getElementById('tw-banner')?.classList.add('hidden');
+  });
+  document.getElementById('ffmpeg-banner-close')?.addEventListener('click', ()=>{
+    document.getElementById('ffmpeg-banner')?.classList.add('hidden');
+  });
 }
 export function addQueuedItem(id,name,size){
-  const r=document.getElementById('results'); const card=document.createElement('div'); card.className='card bg-slate-900/70 border border-slate-700 rounded-xl p-3'; card.id='item-'+id;
-  card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="display:flex;align-items:center;gap:12px;min-width:220px;">
-      <img id="thumb-${id}" alt="thumbnail" style="width:64px;height:64px;border-radius:8px;object-fit:cover;background:#1f2937;border:1px solid #273244"/>
-      <div><div style="font-weight:600">${name}</div><div style="color:#94a3b8;font-size:14px">${(size/1024).toFixed(1)} KB</div><div id="meta-${id}" style="color:#94a3b8;font-size:12px;margin-top:2px"></div></div>
-    </div><div id="status-${id}" style="color:#fbbf24;font-weight:600">Queued</div></div>
-    <div style="margin-top:10px;width:100%;background:#1f2937;height:8px;border-radius:6px;overflow:hidden"><div id="bar-${id}" style="height:8px;width:0%;background:#3b82f6"></div></div>
-    <div id="actions-${id}" style="margin-top:10px"></div>`;
+  const r=document.getElementById('results');
+  const card=document.createElement('div');
+  card.className='bg-slate-900/70 border border-slate-700 rounded-xl p-3 space-y-2';
+  card.id='item-'+id;
+  card.innerHTML=`
+    <div class="flex justify-between items-center gap-3 flex-wrap">
+      <div class="flex items-center gap-3 min-w-[220px]">
+        <img id="thumb-${id}" alt="thumbnail" class="w-16 h-16 rounded-lg object-cover bg-gray-800 border border-slate-700"/>
+        <div>
+          <div class="font-semibold">${name}</div>
+          <div class="text-slate-400 text-sm">${(size/1024).toFixed(1)} KB</div>
+          <div id="meta-${id}" class="text-slate-400 text-xs mt-0.5"></div>
+        </div>
+      </div>
+      <div id="status-${id}" class="text-amber-400 font-semibold">Queued</div>
+    </div>
+    <div class="mt-2 w-full bg-gray-800 h-2 rounded-md overflow-hidden">
+      <div id="bar-${id}" class="h-2 w-0 bg-blue-500"></div>
+    </div>
+    <div id="actions-${id}" class="mt-2"></div>`;
   r.appendChild(card);
 }
 export function setPlaceholderThumbnail(id){
@@ -31,12 +53,31 @@ export function setPlaceholderThumbnail(id){
 }
 export function setItemThumbnail(id,url){ const img=document.getElementById('thumb-'+id); if(img) img.src=url; }
 export function setItemMeta(id,info){ const m=document.getElementById('meta-'+id); if(!m) return; const fps=info.fps?info.fps.toFixed(2)+' fps':'—'; const fr=info.frames?String(info.frames).padStart(4,'0'):'0000'; const kind=info.animated?'animation sequence':'still image'; m.textContent=`${fps} • ${fr} frames • ${kind}`; }
-export function updateItemProgress(id,ratio){ const b=document.getElementById('bar-'+id), s=document.getElementById('status-'+id); if(b) b.style.width=Math.round(ratio*100)+'%'; if(s){ s.textContent='Processing '+Math.round(ratio*100)+'%'; s.style.color='#60a5fa'; } }
-export function setItemConverted(id,blob,name){ const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id); if(b) b.style.width='100%'; if(s){ s.textContent='Converted'; s.style.color='#22c55e'; } if(a){ const link=document.createElement('a'); link.textContent='Download'; link.href=URL.createObjectURL(blob); link.download=name; link.className='text-blue-400 font-semibold hover:underline mr-3'; a.innerHTML=''; a.appendChild(link);} }
-export function setItemError(id,msg){ const s=document.getElementById('status-'+id); if(s){ s.textContent=msg||'Error'; s.style.color='#ef4444'; } }
+export function updateItemProgress(id,ratio){
+  const b=document.getElementById('bar-'+id), s=document.getElementById('status-'+id);
+  if(b) b.style.width=Math.round(ratio*100)+'%';
+  if(s){ s.textContent='Processing '+Math.round(ratio*100)+'%'; s.classList.remove('text-amber-400'); s.classList.add('text-blue-400'); }
+}
+export function setItemConverted(id,blob,name){
+  const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id);
+  if(b) b.style.width='100%';
+  if(s){ s.textContent='Converted'; s.classList.remove('text-blue-400'); s.classList.add('text-green-500'); }
+  if(a){ const link=document.createElement('a'); link.textContent='Download'; link.href=URL.createObjectURL(blob); link.download=name; link.className='text-blue-400 font-semibold hover:underline mr-3'; a.innerHTML=''; a.appendChild(link); }
+}
+export function setItemError(id,msg){
+  const s=document.getElementById('status-'+id);
+  if(s){ s.textContent=msg||'Error'; s.classList.remove('text-blue-400','text-amber-400'); s.classList.add('text-red-500'); }
+}
 export const bannerCtl = {
-  show(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.remove('hidden'); },
-  hide(){ const b=document.getElementById('ffmpeg-banner'); if(b) b.classList.add('hidden'); },
-  step(step,total,label){ const f=document.getElementById('ffmpeg-banner-file'); const c=document.getElementById('ffmpeg-banner-count'); const bar=document.getElementById('ffmpeg-banner-bar'); if(f) f.textContent=label; if(c) c.textContent=`${(step-1<0?0:step-1)} / ${total} complete`; if(bar) bar.style.width='0%'; }
+  show(){ document.getElementById('ffmpeg-banner')?.classList.remove('hidden'); },
+  hide(){ document.getElementById('ffmpeg-banner')?.classList.add('hidden'); },
+  step(step,total,label){
+    const f=document.getElementById('ffmpeg-banner-file');
+    const c=document.getElementById('ffmpeg-banner-count');
+    const bar=document.getElementById('ffmpeg-banner-bar');
+    if(f) f.textContent=label;
+    if(c) c.textContent=`${(step-1<0?0:step-1)} / ${total} complete`;
+    if(bar) bar.style.width='0%';
+  }
 };
 export function pct(p){ const bar=document.getElementById('ffmpeg-banner-bar'); if(bar) bar.style.width=Math.round(p)+'%'; }
