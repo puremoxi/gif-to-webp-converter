@@ -1,31 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-
-function toRegex(glob){ const esc=glob.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*'); return new RegExp('^'+esc+'$'); }
-function listFilesRecursive(dir){ const out=[]; if(!fs.existsSync(dir)) return out; const st=fs.statSync(dir); if(st.isFile()) return [dir]; const stack=[dir]; while(stack.length){ const d=stack.pop(); for(const n of fs.readdirSync(d)){ const p=path.join(d,n); const s=fs.statSync(p); if(s.isDirectory()) stack.push(p); else out.push(p); } } return out; }
-
-function validate(){
-  const root=__dirname; const manifestPath=path.join(root,'version.json'); const vendorDir=path.join(root,'vendor','ffmpeg');
-  if(!fs.existsSync(manifestPath)){ console.warn('[manifest] version.json not found — skipping validation.'); return; }
-  let m; try{ m=JSON.parse(fs.readFileSync(manifestPath,'utf-8')); }catch(e){ console.error('[manifest] Failed to parse version.json:', e.message); return; }
-  const errs=[]; if(typeof m.schema_version!=='number') errs.push('schema_version must be number');
-  if(!m.app||typeof m.app.version!=='string') errs.push('app.version must be string');
-  if(!m.ffmpeg||!m.ffmpeg.required_vendor_artifacts) errs.push('ffmpeg.required_vendor_artifacts is required');
-  if(errs.length) console.error('[manifest] Schema errors:', errs.join('; '));
-  else console.log(`[manifest] Loaded version ${m.app.version} (schema ${m.schema_version})`);
-  if(m.ffmpeg&&m.ffmpeg.requires_coop_coep) console.log('[manifest] Note: COOP/COEP required; this server sets headers.');
-  const reqs=Array.isArray(m.ffmpeg?.required_vendor_artifacts)?m.ffmpeg.required_vendor_artifacts:[];
-  const files=listFilesRecursive(vendorDir).map(p=>p.replace(root+path.sep,'').replace(/\\/g,'/'));
-  for(const pat of reqs){
-    if(!pat.includes('*')){
-      const abs=path.join(root,pat);
-      if(!fs.existsSync(abs)) console.warn(`[manifest] Missing vendor artifact: ${pat}`);
-    }else{
-      const rx=toRegex(pat);
-      const any=files.some(f=>rx.test(f));
-      if(!any) console.warn(`[manifest] No files matched glob: ${pat}`);
-    }
-  }
-  console.log('[manifest] Validation complete.');
-}
-module.exports={ validate };
+const fs=require('fs'),p=require('path');function ok(m){console.log('[ok]',m)}function warn(m){console.warn('[warn]',m)}function err(m){console.error('[err]',m)}
+const root=__dirname;
+try{const v=JSON.parse(fs.readFileSync(p.join(root,'version.json'),'utf8'));v&&v.version?ok('[validate] version.json OK'):warn('[validate] version.json missing version')}catch(e){err('[validate] version.json read/parse failed: '+e.message)}
+const vend=x=>p.join(root,'vendor','ffmpeg',x);
+const req=['ffmpeg.min.js','ffmpeg-core.js','ffmpeg-core.wasm','ffmpeg-core.worker.js'];
+for(const f of req){const full=vend(f); if(!fs.existsSync(full)) err('[vendor] missing '+f); else ok('[vendor] '+f+' present');}
+const wasm=vend('ffmpeg-core.wasm'); if(fs.existsSync(wasm)){const fd=fs.openSync(wasm,'r');const b=Buffer.alloc(4);fs.read(fd,b,0,4,0);fs.closeSync(fd); if(b[0]===0x00&&b[1]===0x61&&b[2]===0x73&&b[3]===0x6d) ok('[vendor] ffmpeg-core.wasm has valid WASM magic'); else err('[vendor] ffmpeg-core.wasm magic invalid');}
+const jszip=p.join(root,'vendor','jszip','jszip.min.js'); fs.existsSync(jszip)?ok('Found JSZip (vendor/jszip/jszip.min.js)'):warn('JSZip not found. ZIP downloads disabled until added.');

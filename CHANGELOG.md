@@ -1,5 +1,5 @@
-# 🧾 GIF → WebP Converter — Changelog
+# CHANGELOG
 
-## v3.6.9 — 2025-11-10
-- Included full app files plus `vendor/ffmpeg/` folder with `README.txt` placeholder so users always see where to drop FFmpeg UMD/core files.
-- Maintains strict CSP and self-hosted JSZip flow.
+## v3.6.9
+- Reverted to ESM strict‑CSP variant.
+- UI: resolution shown near thumbnail (before FPS); added “Processing Queue” collapsible section; header note added.
