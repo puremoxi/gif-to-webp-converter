@@ -10,7 +10,8 @@
   <div class="max-w-5xl mx-auto">
     <header class="text-center mb-6">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">GIF → WebP Converter</h1>
-      <p class="text-gray-400">Multi‑threaded FFmpeg WASM (core‑mt). Place UMD files in <code>vendor/ffmpeg/</code>.</p>
+      <p class="text-gray-400">Please refer to README for proper installation of this tool.</p>
+      <p class="text-gray-400">Multi-threaded FFmpeg WASM (core-mt). Place UMD files in <code>vendor/ffmpeg/</code>.</p>
     </header>
 
     <div id="tw-banner" class="hidden max-w-3xl mx-auto mb-4 rounded-xl border border-amber-600/60 bg-amber-900/30 p-3">
@@ -34,14 +35,14 @@
             <span id="ffmpeg-banner-count">0 / 3 complete</span>
           </div>
           <div class="mt-2 h-2 rounded bg-slate-800 overflow-hidden border border-slate-700">
-            <div id="ffmpeg-banner-bar" class="h-2 w-0 bg-blue-500 transition-[width] duration-150 ease-linear"></div>
+            <div id="ffmpeg-banner-bar" class="h-2 w-0 transition-[width] duration-150 ease-linear"></div>
           </div>
         </div>
         <button id="ffmpeg-banner-close" class="text-slate-400 hover:text-slate-200">✕</button>
       </div>
     </div>
 
-    <div id="dropzone" class="relative border-4 border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center transition-all duration-300 hover:border-gray-500 mb-4">
+    <div id="dropzone" class="relative border-4 border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center transition-all duration-300 hover:border-gray-500 mb-2">
       <input type="file" id="fileInput" multiple accept="image/gif" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Choose GIF files"/>
       <div class="pointer-events-none select-none">
         <p class="text-xl font-medium text-white">Drag & drop your .gif files here</p>
@@ -50,12 +51,16 @@
       </div>
     </div>
 
+    <!-- Aggregate batch time (centered) -->
+    <div id="batch-time" class="max-w-3xl mx-auto mb-4 text-sm text-slate-300 text-center"></div>
+
     <div class="flex flex-col sm:flex-row justify-center gap-4 my-4">
       <button id="start-button" disabled class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Start Conversion</button>
       <button id="clear-button" class="bg-gray-700 text-gray-300 font-semibold py-3 px-6 rounded-lg hover:bg-gray-600 transition-all duration-200">Clear Queue</button>
       <button id="download-all" disabled class="bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-all duration-200 disabled:opacity-50">Download ZIP</button>
     </div>
 
+    <!-- Advanced (collapsible; same style as Processing Queue) -->
     <section id="advanced" class="mb-4">
       <button id="advanced-toggle"
               class="w-full text-left font-semibold py-2 px-3 rounded-lg bg-slate-800/60 border border-slate-700 hover:bg-slate-800 transition"
@@ -90,11 +95,23 @@
       </div>
     </section>
 
-    <div id="results" class="space-y-3"></div>
+    <!-- Processing Queue (collapsible; default open) -->
+    <section id="processing-queue" class="mb-4">
+      <button id="processing-queue-toggle"
+              class="w-full text-left font-semibold py-2 px-3 rounded-lg bg-slate-800/60 border border-slate-700 hover:bg-slate-800 transition"
+              aria-expanded="true"
+              aria-controls="processing-queue-body">
+        Processing Queue
+      </button>
+      <div id="processing-queue-body" class="mt-3">
+        <div id="results" class="space-y-3"></div>
+      </div>
+    </section>
   </div>
 
   <script src="/vendor/ffmpeg/ffmpeg.js"></script>
   <script src="/src/boot.js"></script>
+  <script type="module" src="/src/ui-extensions.js"></script>
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>
