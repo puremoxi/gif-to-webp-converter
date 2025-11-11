@@ -10,41 +10,21 @@ let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 // Map originals to UI ids for timing + resolution
 const fileToId = new WeakMap();
 
-// Attempt to find the queue item's DOM node with several selector strategies, retrying briefly.
-async function waitForItemEl(id, timeout=1200) {
+async function waitForItemEl(id, timeout=1500) {
   const start = performance.now();
-  const sel = (id) => [
-    `[data-id="${id}"]`,
-    `#item-${id}`,
-    `#queue-item-${id}`,
-    `#result-${id}`,
-    `[data-item-id="${id}"]`,
-    `[data-key="${id}"]`,
-    `.queue-item[data-id="${id}"]`
+  const sels = [
+    `[data-id="${id}"]`, `#item-${id}`, `#queue-item-${id}`, `#result-${id}`,
+    `[data-item-id="${id}"]`, `[data-key="${id}"]`, `#meta-${id}`
   ];
   while (performance.now() - start < timeout) {
-    for (const s of sel(id)) {
-      const el = document.querySelector(s);
-      if (el) return el;
-    }
+    for (const s of sels) { const el = document.querySelector(s); if (el) return el; }
     await new Promise(r => setTimeout(r, 50));
   }
   return null;
 }
 
-(async () => {
-  try{
-    const r = await fetch('/vendor/css/tailwind.css', { cache: 'no-store' });
-    if(!r.ok){ document.getElementById('tw-banner')?.classList.remove('hidden'); console.warn('[css] vendor/css/tailwind.css not found'); }
-    else{
-      const text = await r.text();
-      if(/Build me via: npm run build:css/i.test(text) || text.trim().length < 64){
-        document.getElementById('tw-banner')?.classList.remove('hidden');
-        console.warn('[css] vendor/css/tailwind.css appears to be a placeholder; run npm run build:css');
-      }
-    }
-  }catch{ document.getElementById('tw-banner')?.classList.remove('hidden'); }
-})();
+// Initial ready text
+status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
 function getSettings(){
@@ -61,18 +41,22 @@ function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
 (async()=>{
   try{
     ffmpeg=await initFFmpeg();
-    ffmpegReady=true; status.textContent='Converter ready. Please add files.'; updateStart();
+    ffmpegReady=true; status.textContent='Ready. Please add files.'; updateStart();
   }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
 })();
 
-// Wrap conversion so we can time per-file and update UI around it
+// Wrap conversion so we can update size summary post-convert
 const queue=createConversionQueue(async (file,ctx)=> {
   const id = fileToId.get(file);
-  if (id!=null && window.UIExt?.markFileStartById) window.UIExt.markFileStartById(id);
-  const t0 = performance.now();
   const out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
-  const elapsed = performance.now() - t0;
-  if (id!=null && window.UIExt?.markFileCompleteById) window.UIExt.markFileCompleteById(id, elapsed);
+  converted.push(out);
+  // After conversion, write the size summary (GIF | WEBP | % reduction)
+  try {
+    const el = await waitForItemEl(id, 1500);
+    if (el && window.UIExt?.writeSizeSummaryByEls) {
+      window.UIExt.writeSizeSummaryByEls(el, file.size, out.blob.size);
+    }
+  } catch {}
   return out;
 });
 
@@ -98,18 +82,24 @@ async function handle(files){
 
     setPlaceholderThumbnail(it.id);
 
-    // Populate resolution in UI (closest to thumbnail, before FPS)
+    // Show initial file size in MB (replaces KB line), and inject resolution into meta line
     try {
       const el = await waitForItemEl(it.id, 1500);
-      if (el && window.UIExt?.populateResolutionUI) {
-        await window.UIExt.populateResolutionUI(el, it.file);
-      } else if (window.UIExt?.populateResolutionUIById) {
-        await window.UIExt.populateResolutionUIById(it.id, it.file);
-      }
+      if (el && window.UIExt?.populateFileSizeUI) window.UIExt.populateFileSizeUI(el, it.file);
+      if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
     } catch {}
 
-    // Existing metadata (fps/duration/etc) via gifInfo -> ui module; leave as-is
-    getGifInfo(it.file).then(info=>setItemMeta(it.id,info)).catch(()=>{});
+    // Existing metadata (fps/duration/etc)
+    getGifInfo(it.file)
+      .then(async info => {
+        setItemMeta(it.id, info);
+        // Re-apply resolution prefix AFTER setItemMeta (which overwrites the meta line)
+        try {
+          const el = await waitForItemEl(it.id, 1500);
+          if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
+        } catch {}
+      })
+      .catch(()=>{});
 
     // Build a small PNG thumb
     try{
@@ -134,15 +124,14 @@ async function getJSZip(){
 
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
-  // Batch timer start (aggregate)
   if (window.UIExt?.markBatchStart) window.UIExt.markBatchStart(queued);
   const JSZip = await getJSZip();
-  await queue.run(()=>getSettings(), f=>{ converted.push(f); if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
+  await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
   zipBtn.disabled=false; updateStart();
 });
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
-  queue.clear(); queued=0; updateStart(); status.textContent='Converter ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
+  queue.clear(); queued=0; updateStart(); status.textContent='Ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
 });
 
 document.getElementById('download-all').addEventListener('click', async ()=>{
