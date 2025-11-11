@@ -1,10 +1,49 @@
-# GIF → WebP Converter — v4.0 (Multi-Thread, CSP-Compliant)
+# GIF → WebP Converter --> v4.0 (Multi-Thread, CSP-Compliant)
 
 A self-contained browser-based GIF → WebP converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
 
 ---
 
+## 🚀 Usage
+
+## Quick Start (Windows / PowerShell)
+
+1. download repository.
+2. Navigate to the root directory of the repository (gif-to-webp-converter)
+```
+//powershell
+
+cd $HOME\OneDrive\Documents\GitHub\gif-to-webp-converter\
+```
+3. Run program (strict CSP + COOP/COEP)
+```
+//powershell
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+npm run serve
+```
+4. Open http://localhost:3000 in a browser.
+
+---
+
+## 🆕 Features in v4.0
+
+- Added `ui-extensions.js` for modular UI improvements:
+  - Displays GIF resolution before FPS metadata.
+  - Shows file sizes in MB and post-conversion reduction summary (`GIF | WebP | % reduction`).
+  - Collapsible “Advanced” (default closed) and “Processing Queue” (default open) sections.
+  - Displays aggregate conversion time under “Processing Queue” in format:
+    `Files converted in X minute(s) Y seconds`.
+- Updated UI styling with lighter blue section headers.
+- Updated copy text:
+  - “Converter ready…” → “Ready. Please add files.”
+  - Added “All files processed on local machine.”
+  - Renamed “Download ZIP” → “Download ALL”.
+- Removed redundant “Converted in …” line under the drop zone.
+
+
+---
 ## 📂 Project Hierarchy
 
 ```text
@@ -56,10 +95,46 @@ gif-to-webp-converter/
 
 ---
 
-## 🚀 Usage
+## 🧩 Additional Details
 
-## Quick Start (Windows / PowerShell)
-```powershell
+### Tip: FFmpeg load progress
+The top banner shows `ffmpeg-core.js`, `ffmpeg-core.wasm`, and `ffmpeg-core.worker.js` with a linear progress bar and a `n/3 complete` counter.
+
+### Troubleshooting
+- If FFmpeg fails to load: ensure `vendor/ffmpeg/` contains valid MT UMD chunks.
+- If downloads fail: ensure JSZip is accessible from `vendor/jszip/`.
+- For performance testing, use Chrome or Edge with multi-thread WebAssembly enabled.
+
+### Self-hosted JSZip (CSP-safe)
+This app uses `script-src 'self' 'wasm-unsafe-eval'`. Do **not** import JSZip from a CDN. Use the Quick Start steps above. The ESM wrapper is `/vendor/jszip.mjs` (already included).
+
+### UI Extensions Module
+
+`src/ui-extensions.js` encapsulates browser-side enhancements for the tool:
+
+- **Resolution detection:** Determines GIF dimensions using object URLs.
+- **File size management:** Displays GIF and WebP sizes, calculates percent reduction.
+- **Collapsible sections:** Toggles the “Advanced” and “Processing Queue” UI.
+- **Timing utilities:** Tracks and displays aggregate batch conversion time.
+
+Exposed via `window.UIExt` for internal use in `app.js`.
+
+### CSP Notes
+
+- No inline scripts or `eval()` calls are used.
+- All JS modules are imported via `<script type="module">`.
+- Compatible with strict Content Security Policies.
+
+---
+
+## "Build From Scratch" (Windows / PowerShell)
+**(do at your own risk)**<br>
+
+Although the repository has all of the files needed to run properly using Google Chrome in Windows, if you want are looking to use this application in other browsers or on other OS's , I wanted to share how you can rebuild key components of the relied upon structure in the manner below (only showing windows OS currently). The localization of these elements reflect the desire of the tool to operate within a limited environment. There is a world where the tool could dynamically load or make calls to these services but I did not construct it that way intentionally.
+
+```
+//powershell
+
 cd $HOME\OneDrive\Documents\GitHub\gif-to-webp-converter\
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
@@ -86,63 +161,13 @@ tar -xf .\jszip-3.10.1.tgz
 robocopy .\package\dist .\vendor\jszip jszip.min.js /NJH /NJS
 rmdir /S /Q .\package
 
+# Validate File Structure
+npm run validate
+
 # Run (strict CSP + COOP/COEP)
 npm run serve
 # open http://localhost:3000
 ```
-
-### Tip: FFmpeg load progress
-The top banner shows `ffmpeg-core.js`, `ffmpeg-core.wasm`, and `ffmpeg-core.worker.js` with a linear progress bar and a `n/3 complete` counter.
-
-## Self-hosted JSZip (CSP-safe)
-This app uses `script-src 'self' 'wasm-unsafe-eval'`. Do **not** import JSZip from a CDN.
-Use the Quick Start steps above. The ESM wrapper is `/vendor/jszip.mjs` (already included).
-
----
-
-## 🆕 Features in v4.0
-
-- Added `ui-extensions.js` for modular UI improvements:
-  - Displays GIF resolution before FPS metadata.
-  - Shows file sizes in MB and post-conversion reduction summary (`GIF | WebP | % reduction`).
-  - Collapsible “Advanced” (default closed) and “Processing Queue” (default open) sections.
-  - Displays aggregate conversion time under “Processing Queue” in format:
-    `Files converted in X minute(s) Y seconds`.
-- Updated UI styling with lighter blue section headers.
-- Updated copy text:
-  - “Converter ready…” → “Ready. Please add files.”
-  - Added “All files processed on local machine.”
-  - Renamed “Download ZIP” → “Download ALL”.
-- Removed redundant “Converted in …” line under the drop zone.
-
----
-
-## 🧩 UI Extensions Module
-
-`src/ui-extensions.js` encapsulates browser-side enhancements for the tool:
-
-- **Resolution detection:** Determines GIF dimensions using object URLs.
-- **File size management:** Displays GIF and WebP sizes, calculates percent reduction.
-- **Collapsible sections:** Toggles the “Advanced” and “Processing Queue” UI.
-- **Timing utilities:** Tracks and displays aggregate batch conversion time.
-
-Exposed via `window.UIExt` for internal use in `app.js`.
-
----
-
-## ⚙️ CSP Notes
-
-- No inline scripts or `eval()` calls are used.
-- All JS modules are imported via `<script type="module">`.
-- Compatible with strict Content Security Policies.
-
----
-
-## 🧪 Troubleshooting
-
-- If FFmpeg fails to load: ensure `vendor/ffmpeg/` contains valid MT UMD chunks.
-- If downloads fail: ensure JSZip is accessible from `vendor/jszip/`.
-- For performance testing, use Chrome or Edge with multi-thread WebAssembly enabled.
 
 ---
 
