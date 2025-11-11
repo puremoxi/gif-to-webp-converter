@@ -26,7 +26,7 @@ function setupCollapsible(buttonId, bodyId, defaultExpanded=true) {
 // ---------- Setup collapsibles for Processing Queue and Advanced ----------
 document.addEventListener('DOMContentLoaded', () => {
   setupCollapsible('processing-queue-toggle', 'processing-queue-body', true);
-  setupCollapsible('advanced-toggle', 'advanced-body', true);
+  setupCollapsible('advanced-toggle', 'advanced-body', false);
 });
 
 // ---------- Resolution helpers ----------

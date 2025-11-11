@@ -10,6 +10,28 @@ let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 // Map originals to UI ids for timing + resolution
 const fileToId = new WeakMap();
 
+// Attempt to find the queue item's DOM node with several selector strategies, retrying briefly.
+async function waitForItemEl(id, timeout=1200) {
+  const start = performance.now();
+  const sel = (id) => [
+    `[data-id="${id}"]`,
+    `#item-${id}`,
+    `#queue-item-${id}`,
+    `#result-${id}`,
+    `[data-item-id="${id}"]`,
+    `[data-key="${id}"]`,
+    `.queue-item[data-id="${id}"]`
+  ];
+  while (performance.now() - start < timeout) {
+    for (const s of sel(id)) {
+      const el = document.querySelector(s);
+      if (el) return el;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return null;
+}
+
 (async () => {
   try{
     const r = await fetch('/vendor/css/tailwind.css', { cache: 'no-store' });
@@ -77,7 +99,14 @@ async function handle(files){
     setPlaceholderThumbnail(it.id);
 
     // Populate resolution in UI (closest to thumbnail, before FPS)
-    try { if (window.UIExt?.populateResolutionUIById) await window.UIExt.populateResolutionUIById(it.id, it.file); } catch {}
+    try {
+      const el = await waitForItemEl(it.id, 1500);
+      if (el && window.UIExt?.populateResolutionUI) {
+        await window.UIExt.populateResolutionUI(el, it.file);
+      } else if (window.UIExt?.populateResolutionUIById) {
+        await window.UIExt.populateResolutionUIById(it.id, it.file);
+      }
+    } catch {}
 
     // Existing metadata (fps/duration/etc) via gifInfo -> ui module; leave as-is
     getGifInfo(it.file).then(info=>setItemMeta(it.id,info)).catch(()=>{});
