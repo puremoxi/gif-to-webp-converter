@@ -7,7 +7,7 @@ const dropzone=document.getElementById('dropzone'); const fileInput=document.get
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
 let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 
-// Map originals to UI ids for timing + resolution
+const removedIds = new Set();
 const fileToId = new WeakMap();
 
 async function waitForItemEl(id, timeout=1500) {
@@ -23,7 +23,6 @@ async function waitForItemEl(id, timeout=1500) {
   return null;
 }
 
-// Initial ready text
 status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
@@ -45,12 +44,13 @@ function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
   }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
 })();
 
-// Wrap conversion so we can update size summary post-convert
 const queue=createConversionQueue(async (file,ctx)=> {
   const id = fileToId.get(file);
+  if (removedIds.has(id)) {
+    return { skipped: true, blob: null, name: null };
+  }
   const out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
   converted.push(out);
-  // After conversion, write the size summary (GIF | WEBP | % reduction)
   try {
     const el = await waitForItemEl(id, 1500);
     if (el && window.UIExt?.writeSizeSummaryByEls) {
@@ -77,23 +77,25 @@ dropzone.addEventListener('drop', async e=>{
 async function handle(files){
   const items=await queue.add(files); queued+=items.length; updateStart();
   for(const it of items){
-    // Map file to id so our conversion wrapper can locate its UI
     fileToId.set(it.file, it.id);
-
     setPlaceholderThumbnail(it.id);
 
-    // Show initial file size in MB (replaces KB line), and inject resolution into meta line
     try {
       const el = await waitForItemEl(it.id, 1500);
+      if (el && window.UIExt?.renderRemoveLink) {
+        window.UIExt.renderRemoveLink(el, it.id, (id) => {
+          removedIds.add(id);
+          queued = Math.max(0, queued - 1);
+          updateStart();
+        });
+      }
       if (el && window.UIExt?.populateFileSizeUI) window.UIExt.populateFileSizeUI(el, it.file);
       if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
     } catch {}
 
-    // Existing metadata (fps/duration/etc)
     getGifInfo(it.file)
       .then(async info => {
         setItemMeta(it.id, info);
-        // Re-apply resolution prefix AFTER setItemMeta (which overwrites the meta line)
         try {
           const el = await waitForItemEl(it.id, 1500);
           if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
@@ -101,7 +103,6 @@ async function handle(files){
       })
       .catch(()=>{});
 
-    // Build a small PNG thumb
     try{
       const url=URL.createObjectURL(it.file); const img=new Image(); img.src=url; await img.decode();
       const size=128; const ratio=(img.width||1)/(img.height||1); const w=Math.min(size,img.width||size); const h=Math.round(w/ratio);
@@ -124,6 +125,7 @@ async function getJSZip(){
 
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
+  if (window.UIExt?.hideAllRemoveLinks) window.UIExt.hideAllRemoveLinks();
   if (window.UIExt?.markBatchStart) window.UIExt.markBatchStart(queued);
   const JSZip = await getJSZip();
   await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
@@ -131,13 +133,13 @@ startBtn.addEventListener('click', async ()=>{
 });
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
-  queue.clear(); queued=0; updateStart(); status.textContent='Ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
+  queue.clear(); queued=0; removedIds.clear(); updateStart(); status.textContent='Ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
 });
 
 document.getElementById('download-all').addEventListener('click', async ()=>{
   if(!converted.length) return;
   const JSZip = await getJSZip();
-  const zip=new JSZip(); for(const f of converted){ zip.file(f.name, await f.blob.arrayBuffer()); }
+  const zip=new JSZip(); for(const f of converted){ if (f?.blob) zip.file(f.name, await f.blob.arrayBuffer()); }
   const blob=await zip.generateAsync({type:'blob'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='converted_webp_files.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 });

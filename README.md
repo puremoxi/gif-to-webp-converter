@@ -146,10 +146,12 @@ gif-to-webp-converter/
 |   └─ ... (many dependencies)
 |   
 └─ images/                # Screencaps for README.mdc
-   ├─ tailwindcss/
-   ├─ postcss/
-   ├─ autoprefixer/
-   └─ ... (many dependencies)
+   ├─ GIF_WebP_Converter_UI_A_v001.png
+   ├─ GIF_WebP_Converter_UI_B_v001.png
+   ├─ GIF_WebP_Converter_UI_C_v001.png
+   ├─ GIF_WebP_Converter_UI_D_v001.png
+   ├─ GIF_WebP_Converter_UI_E_v001.png
+   └─ GIF_WebP_Converter_Validation_A_v001.png
 ```
 
 ---
@@ -189,7 +191,7 @@ Exposed via `window.UIExt` for internal use in `app.js`.
 ## "Build From Scratch" (Windows / PowerShell)
 **(do at your own risk)**<br>
 
-Although the repository has all of the files needed to run properly using Google Chrome in Windows, if you want are looking to use this application in other browsers or on other OS's , I wanted to share how you can rebuild key components of the relied upon structure in the manner below (only showing windows OS currently). The localization of these elements reflect the desire of the tool to operate within a limited environment. There is a world where the tool could dynamically load or make calls to these services but I did not construct it that way intentionally.
+Although the repository has all of the files needed to run properly using Google Chrome in Windows, if you want are looking to use this application in other browsers or on other OS's , I wanted to share how you can rebuild key components of the relied upon structure in the manner below (only showing windows OS currently). The localization of these elements reflect the desire of the tool to operate within a limited environment. There is a world where the tool could dynamically load or make calls to these services but that is not the intention of this tool. 
 
 ```
 //powershell
@@ -229,7 +231,15 @@ npm run serve
 ```
 
 ---
+## Validation (what to expect)
 
+This is a limited diagnostic tool that confirms:
+1. the existence of necessary files per the aforementioned "build from scratch"
+2. the file size of said files are within range as expected to ensure that errors like downloading HTML files vs. the source js does not accidentally happen.
+
+![image info](./images/GIF_WebP_Converter_Validation_A_v001.png)
+
+---
 ## 🧾 License
 
 MIT License. Use freely for both personal and commercial projects.

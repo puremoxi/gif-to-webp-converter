@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function findMetaLine(queueItemEl) { return queueItemEl.querySelector('[id^="meta-file-"]'); }
 function findInfoBoxFromMeta(metaEl) { return metaEl?.parentElement || null; }
+function findStatusEl(queueItemEl) { return queueItemEl.querySelector('[id^="status-file-"]'); }
 
 async function getGifResolution(fileOrBlob) {
   const url = URL.createObjectURL(fileOrBlob);
@@ -86,7 +87,35 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
   writeSizeLine(infoBox, `${gifMB} | ${webpMB} | ${perc}`);
 }
 
-// Aggregate timers (only Processing Queue display now)
+function renderRemoveLink(queueItemEl, id, onRemove) {
+  const statusEl = findStatusEl(queueItemEl);
+  if (!statusEl || queueItemEl.querySelector('.remove-link')) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'w-full text-right mt-1';
+
+  const a = document.createElement('button');
+  a.type = 'button';
+  a.className = 'remove-link text-blue-400 hover:text-blue-300 text-sm underline cursor-pointer';
+  a.textContent = 'Remove';
+  a.addEventListener('click', () => {
+    queueItemEl.style.display = 'none';
+    try { onRemove && onRemove(id); } catch {}
+  });
+
+  wrapper.appendChild(a);
+  statusEl.insertAdjacentElement('afterend', wrapper);
+}
+
+function hideAllRemoveLinks() {
+  document.querySelectorAll('.remove-link').forEach(el => {
+    const parent = el.parentElement;
+    if (parent) parent.style.display = 'none';
+    el.style.display = 'none';
+  });
+}
+
+// Aggregate timers under Processing Queue
 const batchTiming = { start: null, pending: 0 };
 function markBatchStart(totalCount) {
   batchTiming.start = performance.now();
@@ -114,6 +143,8 @@ window.UIExt = {
   populateResolutionUI,
   populateFileSizeUI,
   writeSizeSummaryByEls,
+  renderRemoveLink,
+  hideAllRemoveLinks,
   markBatchStart,
   markBatchOneDone,
 };
