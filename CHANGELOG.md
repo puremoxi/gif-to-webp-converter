@@ -1,3 +1,21 @@
+## v4.1.0 — 2025-11-11
+
+**Feature Enhancements**  
+- Added ability to **remove individual files** from the processing queue before conversion:  
+  - Each queued item now includes a **“Remove”** link (styled identically to “Download”).  
+  - Clicking “Remove” instantly hides the item from the UI and excludes it from processing.  
+  - All “Remove” links automatically hide when conversion begins.  
+- **Per-file download improvements:**  
+  - Each “.webp” download filename now appends a timestamp in `_MMDDYYYY_HHMM` format (e.g. `clip_v001_11112025_0655.webp`).  
+- **Batch download improvements:**  
+  - “Download ALL” zip files now include a timestamped suffix in the same format  
+    (e.g. `converted_webp_files_11112025_064025.zip`).  
+- **Header and layout refinements:**  
+  - “Advanced” and “Processing Queue” headers are now centered.  
+  - Clear Queue also clears any displayed “Files converted in …” aggregate timing message.  
+- Internal updates to `ui-extensions.js` and `app.js` to support placement consistency between “Remove” and “Download”, and improve dynamic filename updates.
+
+
 ## v4.0.0 — 2025-11-10
 
 - Introduced `src/ui-extensions.js` for modular UI behavior:
@@ -109,4 +127,5 @@
 | **v2.x** | Early UX & feature integration | Added upload, UI, and core options. |
 | **v3.0–v3.2** | Refactor & modularization | Fully separated app logic for scalability. |
 | **v3.3–v3.5** | Optimization & resilience | Stable conversion, queueing, progress, and race-fixes. |
-| **v3.6-MT** | Performance overhaul | Introduced multi-threaded WASM, chunk handling, and server isolation. 
+| **v3.6-MT** | Performance overhaul | Introduced multi-threaded WASM, chunk handling, and server isolation.
+

@@ -1,9 +1,11 @@
 // /src/ui-extensions.js
 
+// Center headers & setup collapsibles
 function setupCollapsible(buttonId, bodyId, defaultExpanded) {
   const btn = document.getElementById(buttonId);
   const body = document.getElementById(bodyId);
   if (!btn || !body) return;
+  try { btn.classList.add('w-full', 'text-center', 'justify-center'); } catch {}
   const setExpanded = (on) => {
     btn.setAttribute('aria-expanded', on ? 'true' : 'false');
     if (on) body.removeAttribute('hidden'); else body.setAttribute('hidden', '');
@@ -23,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function findMetaLine(queueItemEl) { return queueItemEl.querySelector('[id^="meta-file-"]'); }
 function findInfoBoxFromMeta(metaEl) { return metaEl?.parentElement || null; }
 function findStatusEl(queueItemEl) { return queueItemEl.querySelector('[id^="status-file-"]'); }
+function findActionsEl(queueItemEl) { return queueItemEl.querySelector('[id^="actions-file-"]'); }
 
 async function getGifResolution(fileOrBlob) {
   const url = URL.createObjectURL(fileOrBlob);
@@ -87,35 +90,67 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
   writeSizeLine(infoBox, `${gifMB} | ${webpMB} | ${perc}`);
 }
 
+// --------- Remove control placed where Download appears ---------
 function renderRemoveLink(queueItemEl, id, onRemove) {
-  const statusEl = findStatusEl(queueItemEl);
-  if (!statusEl || queueItemEl.querySelector('.remove-link')) return;
+  const actionsEl = findActionsEl(queueItemEl);
+  if (!actionsEl || queueItemEl.querySelector('.remove-link')) return;
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'w-full text-right mt-1';
-
-  const a = document.createElement('button');
-  a.type = 'button';
-  a.className = 'remove-link text-blue-400 hover:text-blue-300 text-sm underline cursor-pointer';
-  a.textContent = 'Remove';
-  a.addEventListener('click', () => {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  // Exact match of Download style per request
+  btn.className = 'remove-link text-blue-400 font-semibold hover:underline mr-3';
+  btn.textContent = 'Remove';
+  btn.addEventListener('click', () => {
     queueItemEl.style.display = 'none';
     try { onRemove && onRemove(id); } catch {}
   });
 
-  wrapper.appendChild(a);
-  statusEl.insertAdjacentElement('afterend', wrapper);
+  actionsEl.appendChild(btn);
 }
 
 function hideAllRemoveLinks() {
   document.querySelectorAll('.remove-link').forEach(el => {
-    const parent = el.parentElement;
-    if (parent) parent.style.display = 'none';
     el.style.display = 'none';
   });
 }
 
-// Aggregate timers under Processing Queue
+// ---- Per-file Download filename: append _MMDDYYYY_HHMM ----
+function tsNow() {
+  const d = new Date();
+  const pad = (n)=> String(n).padStart(2,'0');
+  const MM = pad(d.getMonth()+1);
+  const DD = pad(d.getDate());
+  const YYYY = d.getFullYear();
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  return `${MM}${DD}${YYYY}_${hh}${mm}`; // no seconds
+}
+
+function updatePerFileDownloadName(queueItemEl, finalName) {
+  const actionsEl = findActionsEl(queueItemEl);
+  if (!actionsEl) return;
+
+  const targetName = (() => {
+    const dot = (finalName || '').lastIndexOf('.');
+    const base = dot >= 0 ? finalName.slice(0, dot) : (finalName || 'converted');
+    return `${base}_${tsNow()}.webp`;
+  })();
+
+  // Anchor might be injected slightly after conversion; poll briefly
+  let tries = 0;
+  const poll = setInterval(() => {
+    const a = actionsEl.querySelector('a[download]');
+    if (a) {
+      a.setAttribute('download', targetName);
+      clearInterval(poll);
+    } else if (++tries > 40) { // ~2s @ 50ms
+      clearInterval(poll);
+    }
+  }, 50);
+}
+
+
+// Aggregate timers (Processing Queue)
 const batchTiming = { start: null, pending: 0 };
 function markBatchStart(totalCount) {
   batchTiming.start = performance.now();
@@ -147,4 +182,5 @@ window.UIExt = {
   hideAllRemoveLinks,
   markBatchStart,
   markBatchOneDone,
+  updatePerFileDownloadName,
 };

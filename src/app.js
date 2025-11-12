@@ -10,6 +10,17 @@ let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
 const removedIds = new Set();
 const fileToId = new WeakMap();
 
+function formatTimestamp(d=new Date()) {
+  const pad = (n)=> String(n).padStart(2,'0');
+  const MM = pad(d.getMonth()+1);
+  const DD = pad(d.getDate());
+  const YYYY = d.getFullYear();
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  const ss = pad(d.getSeconds());
+  return `${MM}${DD}${YYYY}_${hh}${mm}${ss}`;
+}
+
 async function waitForItemEl(id, timeout=1500) {
   const start = performance.now();
   const sels = [
@@ -55,6 +66,11 @@ const queue=createConversionQueue(async (file,ctx)=> {
     const el = await waitForItemEl(id, 1500);
     if (el && window.UIExt?.writeSizeSummaryByEls) {
       window.UIExt.writeSizeSummaryByEls(el, file.size, out.blob.size);
+    }
+    // ensure per-file Download link has timestamped filename
+    if (el && window.UIExt?.updatePerFileDownloadName) {
+      // out.name should be the final filename (.webp). We'll use that as base.
+      window.UIExt.updatePerFileDownloadName(el, out.name || (file.name.replace(/\.[^.]+$/, '') + '.webp'));
     }
   } catch {}
   return out;
@@ -134,6 +150,8 @@ startBtn.addEventListener('click', async ()=>{
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
   queue.clear(); queued=0; removedIds.clear(); updateStart(); status.textContent='Ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
+  const ag = document.getElementById('aggregate-time');
+  if (ag) ag.textContent = '';
 });
 
 document.getElementById('download-all').addEventListener('click', async ()=>{
@@ -141,5 +159,6 @@ document.getElementById('download-all').addEventListener('click', async ()=>{
   const JSZip = await getJSZip();
   const zip=new JSZip(); for(const f of converted){ if (f?.blob) zip.file(f.name, await f.blob.arrayBuffer()); }
   const blob=await zip.generateAsync({type:'blob'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='converted_webp_files.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  const a=document.createElement('a'); a.href=url; a.download=`converted_webp_files_${formatTimestamp()}.zip`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 });

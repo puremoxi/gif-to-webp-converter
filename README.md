@@ -27,15 +27,16 @@ npm run serve
 
 ---
 
-## 🆕 Features --> v.0.4.0
+## 🆕 Features --> v.4.1
 
 - Basic Features
   - Converts Gifs to WebP files (animated files & still images)
   - Batch conversions (multiple files simultaneously)
   - Multithreaded for speed and efficiency
   - Download Converted Files
-  - individual WebP files (Download text link on each file Queue)
+  - Individual WebP files (Download text link on each file Queue)
   - Multiple files as Zip File (Download ALL button)
+  - Add/Remove files in the Processing Queue
 - Data Points per File
   - file size of original Gif file
   - file size of resulting converted WebP file
@@ -46,7 +47,7 @@ npm run serve
   - indication of animation sequence or still image
 - Data Point overall  
   - total time to convert all files in a batch
-- Advanced Features
+- Advanced WebP Conversion Features
   - WebP Quality (0 - 100)
   - Compression Level (0-6)
   - Loop Animation (loop indefinitely vs. no looping)
@@ -56,7 +57,7 @@ npm run serve
 
 ---
 
-## 🆕 How it works --> v.0.4.0
+## 🆕 How it works --> v.4.1
 
 1. Open http://localhost:3000 in a browser.
 
@@ -80,20 +81,22 @@ npm run serve
 
 ---
 
-## 🆕 ChangeLog --> v.0.4.0
+## 🆕 ChangeLog --> v.4.1
 
-- Added `ui-extensions.js` for modular UI improvements:
-  - Displays GIF resolution before FPS metadata.
-  - Shows file sizes in MB and post-conversion reduction summary (`GIF | WebP | % reduction`).
-  - Collapsible “Advanced” (default closed) and “Processing Queue” (default open) sections.
-  - Displays aggregate conversion time under “Processing Queue” in format:
-    `Files converted in X minute(s) Y seconds`.
-- Updated UI styling with lighter blue section headers.
-- Updated copy text:
-  - “Converter ready…” → “Ready. Please add files.”
-  - Added “All files processed on local machine.”
-  - Renamed “Download ZIP” → “Download ALL”.
-- Removed redundant “Converted in …” line under the drop zone.
+**Feature Enhancements**  
+- Added ability to **remove individual files** from the processing queue before conversion:  
+  - Each queued item now includes a **“Remove”** link (styled identically to “Download”).  
+  - Clicking “Remove” instantly hides the item from the UI and excludes it from processing.  
+  - All “Remove” links automatically hide when conversion begins.  
+- **Per-file download improvements:**  
+  - Each “.webp” download filename now appends a timestamp in `_MMDDYYYY_HHMM` format (e.g. `clip_v001_11112025_0655.webp`).  
+- **Batch download improvements:**  
+  - “Download ALL” zip files now include a timestamped suffix in the same format  
+    (e.g. `converted_webp_files_11112025_064025.zip`).  
+- **Header and layout refinements:**  
+  - “Advanced” and “Processing Queue” headers are now centered.  
+  - Clear Queue also clears any displayed “Files converted in …” aggregate timing message.  
+- Internal updates to `ui-extensions.js` and `app.js` to support placement consistency between “Remove” and “Download”, and improve dynamic filename updates.
 
 
 ---
