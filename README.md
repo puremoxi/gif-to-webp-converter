@@ -3,6 +3,20 @@
 A self-contained browser-based GIF → WebP converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
 
+## About This Application
+
+### What is WebP?
+
+WebP is a modern image format developed by Google that supports both lossy and lossless compression, as well as animation. It is designed to create smaller, richer images that make the web faster, offering significantly better compression than either GIF or PNG.
+
+* **For more information:** [https://en.wikipedia.org/wiki/WebP](https://en.wikipedia.org/wiki/WebP)
+
+### What is FFmpeg?
+
+FFmpeg is a powerful, free, and open-source software project capable of handling virtually any multimedia format. This application uses a WebAssembly (WASM) version of FFmpeg, which allows it to run complex video and image processing tasks directly in your browser.
+
+* **For more information:** [https://en.wikipedia.org/wiki/FFmpeg](https://en.wikipedia.org/wiki/FFmpeg)
+
 ---
 
 ## 🚀 Usage
