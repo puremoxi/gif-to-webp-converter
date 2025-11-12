@@ -158,7 +158,62 @@ gif-to-webp-converter/
 ```
 
 ---
+## Project Structure
 
+Here is a breakdown of what each file and folder does in this application.
+
+### Core Application Files (`src/`)
+
+This directory contains all the JavaScript code that makes your application work.
+
+* `src/app.js`: This is the **main controller** of the entire application. It's responsible for:
+    * Loading FFmpeg.
+    * Setting up all the main event listeners (drag-and-drop, file input, Start, Clear, Download All).
+    * Initializing the conversion queue from `queueManager.js`.
+    * Grabbing the user's settings (like quality, loop, etc.) from the UI.
+    * Telling the queue to start when the "Start Conversion" button is clicked.
+* `src/boot.js`: This is a tiny helper script. Its only job is to load the main `app.js` file as a "module" (`<script type="module">`). This is required to use modern `import` and `export` features.
+
+### Core Logic Modules (`src/modules/`)
+
+These files break the application's logic into clean, reusable pieces.
+
+* `src/modules/ffmpegClient.js`: This is the **conversion engine**. It's the only file that knows how to talk to the FFmpeg library.
+    * `initFFmpeg`: Loads the FFmpeg WebAssembly files from `/vendor/ffmpeg/`.
+    * `convertToWebP`: Takes a GIF file and your settings, runs the `ffmpeg` command, and reports progress.
+* `src/modules/ui.js`: This file is responsible for **all changes to the web page**. It doesn't know *how* to convert a file, but it knows how to *show* the process.
+    * It creates the file items in the queue when you drop them.
+    * It updates the progress bar (`updateItemProgress`).
+    * It changes the status from "Queued" to "Processing" to "Converted".
+    * It creates the "Download" link for a finished file (`setItemConverted`).
+    * It shows error messages (`setItemError`).
+    * It controls the pop-up banner that appears while FFmpeg is first loading.
+* `src/modules/queueManager.js`: This file manages the **list of files** to be converted.
+    * It lets you add files to the queue.
+    * Its `run` function starts all the conversion tasks in parallel.
+    * Its `clear` function removes all files from the UI.
+* `src/modules/gifInfo.js`: This is a utility that **reads GIF metadata**. It quickly reads the file to get information like frame count and framerate (FPS) *without* needing to use the heavy FFmpeg library. This is why you see that info instantly when you add a file.
+* `src/ui-extensions.js` & `src/modules/perFrameMixer.js`: These files are **currently not used** in the application. They are likely placeholders or remnants from an earlier version.
+
+### Server & Configuration
+
+* `server.cjs`: This is your **local web server** (run via `npm run serve`). Its job is to:
+    1.  Serve your `index.html` file.
+    2.  Serve all your other assets (JavaScript, CSS, and the FFmpeg files).
+    3.  Set the special `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` security headers. These are **required** by browsers to enable `SharedArrayBuffer`, which FFmpeg.js needs for performance.
+* `package.json`: This is the project's **manifest**. It lists your project's dependencies (like Tailwind CSS) and defines your `npm` scripts (`serve`, `build:css`).
+* `index.html`: The **single HTML page** for the entire application. It contains the HTML structure for the dropzone, buttons, settings panel, and the results list.
+
+### Styling & Vendor Files
+
+* `styles/input.css`: This is your **source CSS file**. You write your Tailwind directives here (like `@tailwind base;`).
+* `vendor/css/tailwind.css`: This is the **output CSS file** that is actually loaded by `index.html`. It is the generated result of running `npm run build:css`.
+* `tailwind.config.js`: The **configuration file for Tailwind CSS**.
+* `postcss.config.js`: The configuration file for PostCSS, the tool that runs Tailwind.
+* `vendor/ffmpeg/`: This folder contains the **pre-compiled FFmpeg.js library**. These are the "magic" files that perform the actual conversion.
+* `vendor/jszip/`: This folder contains the **JSZip library**, which is used by the "Download All" button to create a `.zip` file in your browser.
+
+---
 ## 🧩 Additional Details
 
 ### Tip: FFmpeg load progress
