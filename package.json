@@ -4,14 +4,15 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
+    "// ------------------------": "ASSET BUILD (UNCHANGED)",
+    "serve": "node server.cjs",
+    "serve:fast": "node server.cjs",
+    "serve:strict": "node server.cjs",
     "validate": "node validateManifest.cjs",
     "validate:quiet": "node -e \"process.env.QUIET='1'; require('./validateManifest.cjs').validate()\"",
     "validate:strict": "node -e \"process.env.STRICT='1'; require('./validateManifest.cjs').validate()\"",
-
-    "serve": "npm run validate:quiet && node server.cjs",
-    "serve:strict": "node -e \"process.env.QUIET='1'; process.env.STRICT='1'; require('./validateManifest.cjs').validate()\" && node server.cjs",
-    "serve:fast": "node server.cjs",
-
+    "validate:nohisto": "node -e \"process.env.NO_HISTO='1'; require('./validateManifest.cjs').validate()\"",
+    "validate:quiet:strict": "node -e \"process.env.QUIET='1'; process.env.STRICT='1'; require('./validateManifest.cjs').validate()\"",
     "build:css": "tailwindcss -i styles/input.css -o vendor/css/tailwind.css --minify"
   },
   "devDependencies": {
