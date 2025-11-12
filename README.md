@@ -58,9 +58,23 @@ npm run serve
 
 1. Open http://localhost:3000 in a browser.
 
-![image info](./images/imageGIF_WebP_Converter_UI_A_v001.png)
+![image info](./images/GIF_WebP_Converter_UI_A_v001.png)
+---
+2. Drag and Drop Gifs in DROP AREA. (or click on drop area and search for files you want to convert)
 
-![image](files://C:\Users\ryanm\OneDrive\Documents\GitHub\gif-to-webp-converter\images\imageGIF_WebP_Converter_UI_A.png)
+![image info](./images/GIF_WebP_Converter_UI_B_v001.png)
+---
+3. Make changes to how you would like to process/convert your images in the Advanced Section by clicking on the bar titled "Advanced" and expanding to see the options. (NOTE: the defaults work well 90% of the time.)
+
+![image info](./images/GIF_WebP_Converter_UI_C_v001.png)
+---
+4. Press "Start Conversion" button to begin processing your images/animated gifs.
+
+![image info](./images/GIF_WebP_Converter_UI_D_v001.png)
+---
+5. When an item is completed in the queue, a "Download" link will appear underneath the thumbnail. When all items in the queue are complete, the "Download All" button will activate. You can download your converted files either way.
+
+![image info](./images/GIF_WebP_Converter_UI_E_v001.png)
 
 ---
 
