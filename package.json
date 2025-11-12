@@ -4,8 +4,14 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "serve": "node server.cjs",
-    "validate": "node -e \"require('./validateManifest.cjs').validate()\"",
+    "validate": "node validateManifest.cjs",
+    "validate:quiet": "node -e \"process.env.QUIET='1'; require('./validateManifest.cjs').validate()\"",
+    "validate:strict": "node -e \"process.env.STRICT='1'; require('./validateManifest.cjs').validate()\"",
+
+    "serve": "npm run validate:quiet && node server.cjs",
+    "serve:strict": "node -e \"process.env.QUIET='1'; process.env.STRICT='1'; require('./validateManifest.cjs').validate()\" && node server.cjs",
+    "serve:fast": "node server.cjs",
+
     "build:css": "tailwindcss -i styles/input.css -o vendor/css/tailwind.css --minify"
   },
   "devDependencies": {

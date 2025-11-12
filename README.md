@@ -29,13 +29,14 @@ npm run serve
 
 ## 🆕 Features --> v.0.4.0
 
-- Converts Gifs to WebP files (animated files & still images)
-- Batch conversions (multiple files simultaneously)
-- Multithreaded for speed and efficiency
-- Download Converted Files
+- Basic Features
+  - Converts Gifs to WebP files (animated files & still images)
+  - Batch conversions (multiple files simultaneously)
+  - Multithreaded for speed and efficiency
+  - Download Converted Files
   - individual WebP files (Download text link on each file Queue)
   - Multiple files as Zip File (Download ALL button)
-- Data Points
+- Data Points per File
   - file size of original Gif file
   - file size of resulting converted WebP file
   - % reduction / difference between size of WebP vs. original GIF
@@ -43,6 +44,7 @@ npm run serve
   - FPS of Gif File
   - Frame Duration (# of frames in an animated Gif)
   - indication of animation sequence or still image
+- Data Point overall  
   - total time to convert all files in a batch
 - Advanced Features
   - WebP Quality (0 - 100)
