@@ -5,26 +5,26 @@
   "type": "commonjs",
   "scripts": {
     "// ------------------------": "ASSET BUILD (UNCHANGED)",
-
     "dev": "npm run serve",
     "build": "npm run build:css",
     "test": "npm run validate",
-
     "serve": "node server.cjs",
     "serve:fast": "node server.cjs",
     "serve:strict": "node server.cjs",
-
     "validate": "node validateManifest.cjs",
     "validate:quiet": "node -e \"process.env.QUIET='1'; require('./validateManifest.cjs').validate()\"",
     "validate:strict": "node -e \"process.env.STRICT='1'; require('./validateManifest.cjs').validate()\"",
     "validate:nohisto": "node -e \"process.env.NO_HISTO='1'; require('./validateManifest.cjs').validate()\"",
     "validate:quiet:strict": "node -e \"process.env.QUIET='1'; process.env.STRICT='1'; require('./validateManifest.cjs').validate()\"",
-
     "build:css": "tailwindcss -i styles/input.css -o vendor/css/tailwind.css --minify"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.22",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
     "tailwindcss": "^3.4.18"
   }
 }
