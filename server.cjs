@@ -2,6 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 (async () => {
   // ----- OPTIONAL VALIDATION (opt-in only) -----
@@ -45,9 +46,23 @@ const path = require('path');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 
-    // Resolve path
-    let filePath = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
-    if (req.url === '/' || fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+    // Resolve path (strip leading slash so we don't escape ROOT)
+    const urlPath = decodeURIComponent(req.url.split('?')[0]);
+    let relPath = urlPath.replace(/^\/+/, '');
+    if (relPath === '') relPath = 'index.html';
+    if (urlPath === '/favicon.ico') relPath = 'icons/favicon.ico';
+
+    const normalized = path.normalize(relPath);
+    const rootWithSep = ROOT.endsWith(path.sep) ? ROOT : ROOT + path.sep;
+    let filePath = path.join(ROOT, normalized);
+    if (!filePath.startsWith(rootWithSep)) {
+      res.statusCode = 403;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end('Forbidden');
+      return;
+    }
+
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
       filePath = path.join(ROOT, 'index.html');
     }
 
@@ -64,7 +79,46 @@ const path = require('path');
     });
   });
 
-  server.listen(PORT, () => {
-    console.log(`[server] listening on http://localhost:${PORT}`);
-  });
+  const getNetworkAddress = () => {
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name] || []) {
+        if (net && net.family === 'IPv4' && !net.internal) return net.address;
+      }
+    }
+    return null;
+  };
+
+  const printBanner = (port, usedFallback) => {
+    const local = `http://localhost:${port}`;
+    const ip = getNetworkAddress();
+    const network = ip ? `http://${ip}:${port}` : '(not available)';
+    console.log('Serving!');
+    console.log(`- Local:   ${local}`);
+    console.log(`- Network: ${network}`);
+    if (usedFallback) {
+      console.log(`This port was picked because ${PORT} is in use.`);
+    }
+  };
+
+  const startServer = (port, usedFallback) => {
+    const onError = (err) => {
+      if (err && err.code === 'EADDRINUSE' && !usedFallback) {
+        startServer(0, true);
+        return;
+      }
+      console.error('[server] failed to start', err);
+      process.exit(1);
+    };
+
+    server.once('error', onError);
+    server.listen(port, () => {
+      server.off('error', onError);
+      const addr = server.address();
+      const actualPort = addr && typeof addr === 'object' ? addr.port : port;
+      printBanner(actualPort, usedFallback);
+    });
+  };
+
+  startServer(PORT, false);
 })();

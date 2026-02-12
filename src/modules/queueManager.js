@@ -1,9 +1,15 @@
 import { addQueuedItem, updateItemProgress, setItemConverted, setItemError } from './ui.js';
 export function createConversionQueue(proc){
   const q=[];
+  const isGif = (file) => {
+    if (!file) return false;
+    if (file.type === 'image/gif') return true;
+    const name = String(file.name || '').toLowerCase();
+    return name.endsWith('.gif');
+  };
   return {
     async add(files){
-      const valid=files.filter(f=>f.type==='image/gif');
+      const valid=files.filter(isGif);
       const items=valid.map(f=>({id:`file-${Date.now()}-${Math.random().toString(36).slice(2,9)}`, file:f}));
       for(const it of items) addQueuedItem(it.id,it.file.name,it.file.size);
       q.push(...items); return items;
