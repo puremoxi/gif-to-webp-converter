@@ -100,8 +100,8 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
 function renderRemoveLink(queueItemEl, id, onRemove, label) {
   const actionsEl = findActionsEl(queueItemEl);
   if (!actionsEl) return;
-  const text = label || 'Remove';
-  const isDanger = text.toLowerCase().includes('remove from queue');
+    const text = label || 'Remove';
+    const isDanger = true;
   const existing = queueItemEl.querySelector('.remove-link');
   if (existing) {
     existing.textContent = text;
