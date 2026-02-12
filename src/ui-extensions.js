@@ -22,10 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCollapsible('advanced-toggle', 'advanced-body', false);
 });
 
-function findMetaLine(queueItemEl) { return queueItemEl.querySelector('[id^="meta-file-"]'); }
+function findMetaLine(queueItemEl) {
+  return queueItemEl.querySelector('[id^="meta-"]') || queueItemEl.querySelector('[id^="meta-file-"]');
+}
 function findInfoBoxFromMeta(metaEl) { return metaEl?.parentElement || null; }
-function findStatusEl(queueItemEl) { return queueItemEl.querySelector('[id^="status-file-"]'); }
-function findActionsEl(queueItemEl) { return queueItemEl.querySelector('[id^="actions-file-"]'); }
+function findStatusEl(queueItemEl) {
+  return queueItemEl.querySelector('[id^="status-"]') || queueItemEl.querySelector('[id^="status-file-"]');
+}
+function findActionsEl(queueItemEl) {
+  return queueItemEl.querySelector('[id^="actions-"]') || queueItemEl.querySelector('[id^="actions-file-"]');
+}
 
 async function getGifResolution(fileOrBlob) {
   const url = URL.createObjectURL(fileOrBlob);
@@ -98,8 +104,10 @@ function renderRemoveLink(queueItemEl, id, onRemove, label) {
   const btn = document.createElement('button');
   btn.type = 'button';
   // Exact match of Download style per request
-  btn.className = 'remove-link text-blue-400 font-semibold hover:underline mr-3';
-  btn.textContent = label || 'Remove';
+  const text = label || 'Remove';
+  const isDanger = text.toLowerCase().includes('remove from queue');
+  btn.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
+  btn.textContent = text;
   btn.addEventListener('click', () => {
     queueItemEl.style.display = 'none';
     try { onRemove && onRemove(id); } catch {}

@@ -1,5 +1,6 @@
 // server.cjs
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -41,7 +42,11 @@ const os = require('os');
     '.map':  'application/json; charset=utf-8',
   };
 
-  const server = http.createServer((req, res) => {
+  const sslKeyPath = process.env.SSL_KEY || '';
+  const sslCertPath = process.env.SSL_CERT || '';
+  const useHttps = Boolean(sslKeyPath && sslCertPath);
+
+  const requestHandler = (req, res) => {
     // Basic security headers (COOP/COEP for multi-threaded WASM)
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
@@ -77,7 +82,17 @@ const os = require('os');
       res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
       res.end(data);
     });
-  });
+  };
+
+  const server = useHttps
+    ? https.createServer(
+        {
+          key: fs.readFileSync(sslKeyPath),
+          cert: fs.readFileSync(sslCertPath),
+        },
+        requestHandler
+      )
+    : http.createServer(requestHandler);
 
   const getNetworkAddress = () => {
     const nets = os.networkInterfaces();
@@ -90,9 +105,10 @@ const os = require('os');
   };
 
   const printBanner = (port, usedFallback) => {
-    const local = `http://localhost:${port}`;
+    const scheme = useHttps ? 'https' : 'http';
+    const local = `${scheme}://localhost:${port}`;
     const ip = getNetworkAddress();
-    const network = ip ? `http://${ip}:${port}` : '(not available)';
+    const network = ip ? `${scheme}://${ip}:${port}` : '(not available)';
     console.log('Serving!');
     console.log(`- Local:   ${local}`);
     console.log(`- Network: ${network}`);
