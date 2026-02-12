@@ -99,13 +99,19 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
 // --------- Remove control placed where Download appears ---------
 function renderRemoveLink(queueItemEl, id, onRemove, label) {
   const actionsEl = findActionsEl(queueItemEl);
-  if (!actionsEl || queueItemEl.querySelector('.remove-link')) return;
+  if (!actionsEl) return;
+  const text = label || 'Remove';
+  const isDanger = text.toLowerCase().includes('remove from queue');
+  const existing = queueItemEl.querySelector('.remove-link');
+  if (existing) {
+    existing.textContent = text;
+    existing.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
+    return;
+  }
 
   const btn = document.createElement('button');
   btn.type = 'button';
   // Exact match of Download style per request
-  const text = label || 'Remove';
-  const isDanger = text.toLowerCase().includes('remove from queue');
   btn.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
   btn.textContent = text;
   btn.addEventListener('click', () => {

@@ -62,7 +62,18 @@ export function setItemConverted(id,blob,name){
   const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id);
   if(b) b.style.width='100%';
   if(s){ s.textContent='Converted'; s.classList.remove('text-blue-400'); s.classList.add('text-green-500'); }
-  if(a){ const link=document.createElement('a'); link.textContent='Download'; link.href=URL.createObjectURL(blob); link.download=name; link.className='text-blue-400 font-semibold hover:underline mr-3'; a.innerHTML=''; a.appendChild(link); }
+  if(a){
+    let link = a.querySelector('a[download]');
+    if (!link) {
+      link=document.createElement('a');
+      link.textContent='Download';
+      link.className='text-blue-400 font-semibold hover:underline mr-3';
+    }
+    link.href=URL.createObjectURL(blob);
+    link.download=name;
+    const remove = a.querySelector('.remove-link');
+    if (remove) a.insertBefore(link, remove); else a.appendChild(link);
+  }
 }
 export function setItemError(id,msg){
   const s=document.getElementById('status-'+id);
