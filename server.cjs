@@ -45,9 +45,23 @@ const path = require('path');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 
-    // Resolve path
-    let filePath = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
-    if (req.url === '/' || fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+    // Resolve path (strip leading slash so we don't escape ROOT)
+    const urlPath = decodeURIComponent(req.url.split('?')[0]);
+    let relPath = urlPath.replace(/^\/+/, '');
+    if (relPath === '') relPath = 'index.html';
+    if (urlPath === '/favicon.ico') relPath = 'icons/favicon.ico';
+
+    const normalized = path.normalize(relPath);
+    const rootWithSep = ROOT.endsWith(path.sep) ? ROOT : ROOT + path.sep;
+    let filePath = path.join(ROOT, normalized);
+    if (!filePath.startsWith(rootWithSep)) {
+      res.statusCode = 403;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end('Forbidden');
+      return;
+    }
+
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
       filePath = path.join(ROOT, 'index.html');
     }
 
