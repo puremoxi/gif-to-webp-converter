@@ -5,7 +5,7 @@ import { getGifInfo } from './modules/gifInfo.js';
 
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
-let ffmpeg=null, ffmpegReady=false, queued=0; const converted=[];
+let ffmpeg=null, ffmpegReady=false, queued=0; const converted=new Map();
 
 const removedIds = new Set();
 const fileToId = new WeakMap();
@@ -32,6 +32,17 @@ async function waitForItemEl(id, timeout=1500) {
     await new Promise(r => setTimeout(r, 50));
   }
   return null;
+}
+
+function removeFromQueue(id){
+  removedIds.add(id);
+  queue.remove(id);
+  converted.delete(id);
+  const el = document.getElementById(`item-${id}`);
+  if (el) el.remove();
+  queued = Math.max(0, queued - 1);
+  if (converted.size === 0) zipBtn.disabled = true;
+  updateStart();
 }
 
 status.textContent='Ready. Please add files.';
@@ -61,7 +72,7 @@ const queue=createConversionQueue(async (file,ctx)=> {
     return { skipped: true, blob: null, name: null };
   }
   const out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
-  converted.push(out);
+  converted.set(id, out);
   try {
     const el = await waitForItemEl(id, 1500);
     if (el && window.UIExt?.writeSizeSummaryByEls) {
@@ -71,6 +82,9 @@ const queue=createConversionQueue(async (file,ctx)=> {
     if (el && window.UIExt?.updatePerFileDownloadName) {
       // out.name should be the final filename (.webp). We'll use that as base.
       window.UIExt.updatePerFileDownloadName(el, out.name || (file.name.replace(/\.[^.]+$/, '') + '.webp'));
+    }
+    if (el && window.UIExt?.renderRemoveLink) {
+      window.UIExt.renderRemoveLink(el, id, removeFromQueue, 'Remove from Queue');
     }
   } catch {}
   return out;
@@ -99,11 +113,7 @@ async function handle(files){
     try {
       const el = await waitForItemEl(it.id, 1500);
       if (el && window.UIExt?.renderRemoveLink) {
-        window.UIExt.renderRemoveLink(el, it.id, (id) => {
-          removedIds.add(id);
-          queued = Math.max(0, queued - 1);
-          updateStart();
-        });
+        window.UIExt.renderRemoveLink(el, it.id, removeFromQueue, 'Remove');
       }
       if (el && window.UIExt?.populateFileSizeUI) window.UIExt.populateFileSizeUI(el, it.file);
       if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
@@ -145,19 +155,19 @@ startBtn.addEventListener('click', async ()=>{
   if (window.UIExt?.markBatchStart) window.UIExt.markBatchStart(queued);
   const JSZip = await getJSZip();
   await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
-  zipBtn.disabled=false; updateStart();
+  zipBtn.disabled = (converted.size === 0); updateStart();
 });
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
-  queue.clear(); queued=0; removedIds.clear(); updateStart(); status.textContent='Ready. Please add files.'; converted.length=0; zipBtn.disabled=true;
+  queue.clear(); queued=0; removedIds.clear(); updateStart(); status.textContent='Ready. Please add files.'; converted.clear(); zipBtn.disabled=true;
   const ag = document.getElementById('aggregate-time');
   if (ag) ag.textContent = '';
 });
 
 document.getElementById('download-all').addEventListener('click', async ()=>{
-  if(!converted.length) return;
+  if(converted.size===0) return;
   const JSZip = await getJSZip();
-  const zip=new JSZip(); for(const f of converted){ if (f?.blob) zip.file(f.name, await f.blob.arrayBuffer()); }
+  const zip=new JSZip(); for(const f of converted.values()){ if (f?.blob) zip.file(f.name, await f.blob.arrayBuffer()); }
   const blob=await zip.generateAsync({type:'blob'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`converted_webp_files_${formatTimestamp()}.zip`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);

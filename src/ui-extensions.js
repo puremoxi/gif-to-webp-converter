@@ -91,7 +91,7 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
 }
 
 // --------- Remove control placed where Download appears ---------
-function renderRemoveLink(queueItemEl, id, onRemove) {
+function renderRemoveLink(queueItemEl, id, onRemove, label) {
   const actionsEl = findActionsEl(queueItemEl);
   if (!actionsEl || queueItemEl.querySelector('.remove-link')) return;
 
@@ -99,7 +99,7 @@ function renderRemoveLink(queueItemEl, id, onRemove) {
   btn.type = 'button';
   // Exact match of Download style per request
   btn.className = 'remove-link text-blue-400 font-semibold hover:underline mr-3';
-  btn.textContent = 'Remove';
+  btn.textContent = label || 'Remove';
   btn.addEventListener('click', () => {
     queueItemEl.style.display = 'none';
     try { onRemove && onRemove(id); } catch {}

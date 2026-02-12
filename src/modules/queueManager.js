@@ -23,6 +23,10 @@ export function createConversionQueue(proc){
       })());
       await Promise.all(tasks);
     },
+    remove(id){
+      const idx = q.findIndex(it => it.id === id);
+      if (idx >= 0) q.splice(idx, 1);
+    },
     clear(){ q.length=0; const r=document.getElementById('results'); if(r) r.innerHTML=''; }
   };
 }
