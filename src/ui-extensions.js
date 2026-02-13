@@ -107,6 +107,7 @@ function renderRemoveLink(queueItemEl, id, onRemove, label) {
     existing.textContent = text;
     existing.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
     existing.style.display = 'inline-flex';
+    existing.style.color = '#f87171';
     return;
   }
 
@@ -116,6 +117,7 @@ function renderRemoveLink(queueItemEl, id, onRemove, label) {
   btn.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
   btn.textContent = text;
   btn.style.display = 'inline-flex';
+  btn.style.color = '#f87171';
   btn.addEventListener('click', () => {
     queueItemEl.style.display = 'none';
     try { onRemove && onRemove(id); } catch {}
