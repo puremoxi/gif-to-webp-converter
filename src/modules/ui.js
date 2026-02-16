@@ -3,12 +3,26 @@ export function setupUI(dropzone, fileInput){
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
   const loss=document.getElementById('lossless-toggle'), mix=document.getElementById('mixed-toggle');
   const loop=document.getElementById('loop-toggle'), still=document.getElementById('still-toggle');
+  const resizeToggle=document.getElementById('resize-toggle'), resizeWidth=document.getElementById('resize-width');
 
   q.addEventListener('input',()=>{ qv.textContent=String(q.value) });
   cl.addEventListener('input',()=>{ clv.textContent=String(cl.value) });
 
-  function sync(){ mix.disabled=loss.checked; if(loss.checked) mix.checked=false; still.disabled=loop.checked; if(loop.checked) still.checked=false; }
+  function sync(){
+    mix.disabled=loss.checked; if(loss.checked) mix.checked=false;
+    still.disabled=loop.checked; if(loop.checked) still.checked=false;
+    if (resizeToggle && resizeWidth) resizeWidth.disabled = !resizeToggle.checked;
+  }
   loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
+  resizeToggle?.addEventListener('change', sync);
+  resizeWidth?.addEventListener('change', ()=>{
+    const value = parseInt(resizeWidth.value, 10);
+    if (!Number.isFinite(value) || value < 1) {
+      resizeWidth.value = '1';
+      return;
+    }
+    resizeWidth.value = String(value);
+  });
 
   ['dragenter','dragover','dragleave','drop'].forEach(n=>{
     dropzone.addEventListener(n,e=>e.preventDefault(),false);

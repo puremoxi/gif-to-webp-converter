@@ -1,6 +1,6 @@
-# GIF → WebP Converter --> v4.0 (Multi-Thread, CSP-Compliant)
+# Image → WebP Converter --> v4.1 (Multi-Thread, CSP-Compliant)
 
-A self-contained browser-based GIF → WebP converter powered by FFmpeg WASM (multi-threaded).  
+A self-contained browser-based image → WebP converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
 
 ## About This Application
@@ -44,7 +44,7 @@ npm run serve
 ## 🆕 Features --> v.4.1
 
 - Basic Features
-  - Converts Gifs to WebP files (animated files & still images)
+  - Converts GIF, PNG, and JPG/JPEG files to WebP (animated files & still images)
   - Batch conversions (multiple files simultaneously)
   - Multithreaded for speed and efficiency
   - Download Converted Files
@@ -64,6 +64,7 @@ npm run serve
 - Advanced WebP Conversion Features
   - WebP Quality (0 - 100)
   - Compression Level (0-6)
+  - Resize Down (Proportional): set a max width in px; image is proportionally reduced only when source is wider (no upsizing)
   - Loop Animation (loop indefinitely vs. no looping)
   - Still Image (optimizes conversion for still images)
   - Lossless Compression (if not checked then Lossy)
@@ -77,7 +78,7 @@ npm run serve
 
 ![image info](./images/GIF_WebP_Converter_UI_A_v001.png)
 ---
-2. Drag and Drop Gifs in DROP AREA. (or click on drop area and search for files you want to convert)
+2. Drag and Drop GIF, PNG, or JPG/JPEG files in DROP AREA. (or click on drop area and search for files you want to convert)
 
 ![image info](./images/GIF_WebP_Converter_UI_B_v001.png)
 ---

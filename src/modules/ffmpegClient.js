@@ -39,19 +39,34 @@ export async function initFFmpeg(opts={}){
   return ffmpeg;
 }
 export async function convertToWebP(ffmpeg,file,settings,onProgress){
-  const input=file.name, output=input.replace(/\.gif$/i,'.webp');
-  await ffmpeg.writeFile(input, await ffmpeg.fetchFile(file));
-  const args=['-i',input,'-c:v','libwebp'];
+  const originalName = String(file?.name || 'image');
+  const outputName = originalName.replace(/\.[^.]+$/i,'.webp');
+  const extMatch = originalName.match(/(\.[^.]+)$/i);
+  const inputExt = extMatch ? extMatch[1] : '.bin';
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const inputFs = `in-${token}${inputExt}`;
+  const outputFs = `out-${token}.webp`;
+
+  await ffmpeg.writeFile(inputFs, await ffmpeg.fetchFile(file));
+  const args=['-y','-i',inputFs,'-c:v','libwebp'];
+  if (settings.resizeEnabled && Number.isFinite(settings.resizeWidth) && settings.resizeWidth > 0) {
+    const maxWidth = Math.floor(settings.resizeWidth);
+    args.push('-vf', `scale=min(iw\\,${maxWidth}):-2`);
+  }
   if(Number.isFinite(settings.compressionLevel)) args.push('-compression_level',String(settings.compressionLevel));
   if(settings.lossless) args.push('-lossless','1'); else args.push('-qscale',String(settings.quality));
-  args.push('-loop', settings.loop?'0':'-1');
-  if(settings.still) args.push('-preset','picture');
-  args.push(output);
+  if(settings.still){
+    args.push('-frames:v','1','-preset','picture');
+  } else {
+    args.push('-loop', settings.loop?'0':'-1');
+  }
+  args.push(outputFs);
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
   const h=({progress})=>{ onProgress&&onProgress(smooth(progress)); };
   ffmpeg.on('progress',h);
   try{ await ffmpeg.exec(args); } finally { try{ ffmpeg.off('progress',h);}catch{} }
-  const data=await ffmpeg.readFile(output);
-  try{ await ffmpeg.deleteFile(input);}catch{}; try{ await ffmpeg.deleteFile(output);}catch{};
-  return {name:output, blob:new Blob([data.buffer],{type:'image/webp'})};
+  const data=await ffmpeg.readFile(outputFs);
+  try{ await ffmpeg.deleteFile(inputFs);}catch{}
+  try{ await ffmpeg.deleteFile(outputFs);}catch{}
+  return {name:outputName, blob:new Blob([data.buffer],{type:'image/webp'})};
 }

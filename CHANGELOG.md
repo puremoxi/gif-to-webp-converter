@@ -1,6 +1,9 @@
 ## v4.1.0 — 2025-11-11
 
 **Feature Enhancements**  
+- Added support for still-image inputs beyond GIF:
+  - Queue now accepts **PNG** and **JPG/JPEG** files in addition to GIF.
+  - Conversion output naming now works generically for image extensions (`.gif`, `.png`, `.jpg`, `.jpeg` → `.webp`).
 - Added ability to **remove individual files** from the processing queue before conversion:  
   - Each queued item now includes a **“Remove”** link (styled identically to “Download”).  
   - Clicking “Remove” instantly hides the item from the UI and excludes it from processing.  

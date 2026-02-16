@@ -49,13 +49,18 @@ status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
 function getSettings(){
+  const resizeEnabled = document.getElementById('resize-toggle')?.checked;
+  const resizeWidthRaw = parseInt(document.getElementById('resize-width')?.value, 10);
+  const resizeWidth = Number.isFinite(resizeWidthRaw) && resizeWidthRaw > 0 ? resizeWidthRaw : null;
   return {
     quality: parseInt(document.getElementById('quality').value,10)||90,
     compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
     loop: document.getElementById('loop-toggle').checked,
     still: document.getElementById('still-toggle').checked,
     lossless: document.getElementById('lossless-toggle').checked,
-    mixed: document.getElementById('mixed-toggle').checked
+    mixed: document.getElementById('mixed-toggle').checked,
+    resizeEnabled,
+    resizeWidth
   };
 }
 function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "app": {
     "name": "gif-to-webp-converter",
-    "version": "4.0.0",
+    "version": "4.1.0",
     "mode": "multi-threaded",
     "build_time_utc": "2025-11-10T04:13:00Z"
   },
