@@ -10,7 +10,6 @@ export function setupUI(dropzone, fileInput){
 
   function sync(){
     mix.disabled=loss.checked; if(loss.checked) mix.checked=false;
-    still.disabled=loop.checked; if(loop.checked) still.checked=false;
     if (resizeToggle && resizeWidth) resizeWidth.disabled = !resizeToggle.checked;
   }
   loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();

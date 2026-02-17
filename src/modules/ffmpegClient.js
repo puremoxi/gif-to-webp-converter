@@ -40,6 +40,9 @@ export async function initFFmpeg(opts={}){
 }
 export async function convertToWebP(ffmpeg,file,settings,onProgress){
   const originalName = String(file?.name || 'image');
+  const originalType = String(file?.type || '').toLowerCase();
+  const isGifInput = originalType === 'image/gif' || /\.gif$/i.test(originalName);
+  const shouldStillEncode = !!settings.still || !isGifInput;
   const outputName = originalName.replace(/\.[^.]+$/i,'.webp');
   const extMatch = originalName.match(/(\.[^.]+)$/i);
   const inputExt = extMatch ? extMatch[1] : '.bin';
@@ -55,7 +58,7 @@ export async function convertToWebP(ffmpeg,file,settings,onProgress){
   }
   if(Number.isFinite(settings.compressionLevel)) args.push('-compression_level',String(settings.compressionLevel));
   if(settings.lossless) args.push('-lossless','1'); else args.push('-qscale',String(settings.quality));
-  if(settings.still){
+  if(shouldStillEncode){
     args.push('-frames:v','1','-preset','picture');
   } else {
     args.push('-loop', settings.loop?'0':'-1');
