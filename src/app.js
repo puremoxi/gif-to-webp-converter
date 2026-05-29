@@ -158,9 +158,12 @@ startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
   if (window.UIExt?.hideAllRemoveLinks) window.UIExt.hideAllRemoveLinks();
   if (window.UIExt?.markBatchStart) window.UIExt.markBatchStart(queued);
-  const JSZip = await getJSZip();
-  await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
-  zipBtn.disabled = (converted.size === 0); updateStart();
+  try {
+    await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
+  } finally {
+    zipBtn.disabled = (converted.size === 0);
+    updateStart();
+  }
 });
 
 document.getElementById('clear-button').addEventListener('click', ()=>{

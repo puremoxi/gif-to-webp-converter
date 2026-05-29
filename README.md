@@ -21,23 +21,169 @@ FFmpeg is a powerful, free, and open-source software project capable of handling
 
 ## 🚀 Usage
 
-## Quick Start (Windows / PowerShell)
+## Quick Start - Option 01 (Windows / PowerShell)
 
-1. download repository.
-2. Navigate to the root directory of the repository (gif-to-webp-converter)
-```
-//powershell
+Use this option when you are running the tool from a Windows-based project folder or from a Windows-use copy of the repository.
 
+1. Download or clone the repository.
+2. Navigate to the root directory of the repository (`gif-to-webp-converter`).
+
+```powershell
 cd $HOME\OneDrive\Documents\GitHub\gif-to-webp-converter\
 ```
-3. Run program (strict CSP + COOP/COEP)
-```
-//powershell
 
+3. Run the program with strict CSP + COOP/COEP headers.
+
+```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 npm run serve
 ```
-4. Open http://localhost:3000 in a browser.
+
+4. Open the local app in a browser.
+
+```text
+http://localhost:3000
+```
+
+---
+
+## Quick Start - Option 02 (WSL Development + Windows Everyday Launcher)
+
+Use this option only when you are actively developing the tool in WSL/Ubuntu and also want to launch it from Windows as an everyday tool.
+
+This workflow keeps one source of truth for development:
+
+```text
+WSL / Ubuntu development repo:
+/home/rmcdougal/projects/gif-to-webp-converter
+
+Windows launcher location:
+C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
+```
+
+The Windows `.bat` file is only a launcher. It does not duplicate the source repo. It calls a small WSL runner script, which loads `nvm`, switches into the project folder, and runs `npm run serve`.
+
+### 1. Confirm the WSL project runs with the correct Node/npm
+
+From WSL/Ubuntu:
+
+```bash
+cd ~/projects/gif-to-webp-converter
+which node
+which npm
+node -v
+npm -v
+```
+
+Expected result should point to the WSL `nvm` install, similar to:
+
+```text
+/home/rmcdougal/.nvm/versions/node/v24.13.0/bin/node
+/home/rmcdougal/.nvm/versions/node/v24.13.0/bin/npm
+v24.13.0
+11.6.2
+```
+
+### 2. Create the WSL runner script
+
+From WSL/Ubuntu:
+
+```bash
+mkdir -p ~/bin
+
+cat > ~/bin/run-gif-to-webp-converter <<'EOF'
+#!/usr/bin/env bash
+
+export NVM_DIR="$HOME/.nvm"
+
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh"
+else
+  echo "ERROR: nvm not found at $NVM_DIR/nvm.sh"
+  exit 1
+fi
+
+cd "$HOME/projects/gif-to-webp-converter" || exit 1
+
+echo "Using node: $(which node)"
+echo "Using npm:  $(which npm)"
+echo "Node version: $(node -v)"
+echo "npm version:  $(npm -v)"
+echo
+
+npm run serve
+EOF
+
+chmod +x ~/bin/run-gif-to-webp-converter
+```
+
+### 3. Test the WSL runner directly
+
+From WSL/Ubuntu:
+
+```bash
+~/bin/run-gif-to-webp-converter
+```
+
+The server should start and print the local URL. Open the app in Windows at:
+
+```text
+http://localhost:3000
+```
+
+Stop the server with:
+
+```text
+Ctrl+C
+```
+
+### 4. Create the Windows launcher folder
+
+From WSL/Ubuntu:
+
+```bash
+mkdir -p /mnt/c/Users/ryanm/tools/launchers
+```
+
+### 5. Create the Windows `.bat` launcher
+
+From WSL/Ubuntu:
+
+```bash
+WINTOOLS="/mnt/c/Users/ryanm/tools"
+
+cat > "$WINTOOLS/launchers/gif-to-webp-converter.bat" <<'EOF'
+@echo off
+wsl.exe -d Ubuntu-22.04 -- bash --noprofile --norc /home/rmcdougal/bin/run-gif-to-webp-converter
+pause
+EOF
+```
+
+### 6. Launch from Windows
+
+From Windows PowerShell:
+
+```powershell
+C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+### Why this option exists
+
+This avoids maintaining two active copies of the same repo. The recommended model is:
+
+```text
+WSL / Ubuntu repo = development source of truth
+Windows tools folder = launcher and everyday access point
+GitHub = remote backup and version history
+```
+
+If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm that the runner script prints WSL `nvm` paths for both `node` and `npm`.
 
 ---
 
