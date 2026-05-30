@@ -1,6 +1,6 @@
-# Image → WebP Converter --> v4.1 (Multi-Thread, CSP-Compliant)
+# Shrink Ray --> v4.2 (Multi-Format, Multi-Thread, CSP-Compliant)
 
-A self-contained browser-based image → WebP converter powered by FFmpeg WASM (multi-threaded).  
+A self-contained browser-based image converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
 
 ## About This Application
@@ -10,6 +10,12 @@ All processing is performed locally — no files are uploaded.
 WebP is a modern image format developed by Google that supports both lossy and lossless compression, as well as animation. It is designed to create smaller, richer images that make the web faster, offering significantly better compression than either GIF or PNG.
 
 * **For more information:** [https://en.wikipedia.org/wiki/WebP](https://en.wikipedia.org/wiki/WebP)
+
+### What is AVIF?
+
+AVIF is a modern image format based on the AV1 codec. It is often very efficient for still images and is now available as an output option in Shrink Ray.
+
+* **For more information:** [https://en.wikipedia.org/wiki/AVIF](https://en.wikipedia.org/wiki/AVIF)
 
 ### What is FFmpeg?
 
@@ -187,38 +193,55 @@ If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm
 
 ---
 
-## 🆕 Features --> v.4.1
+## 🆕 Features --> v4.2
 
 - Basic Features
-  - Converts GIF, PNG, and JPG/JPEG files to WebP (animated files & still images)
+  - Converts GIF, PNG, and JPG/JPEG files to WebP or AVIF.
   - Batch conversions (multiple files simultaneously)
   - Multithreaded for speed and efficiency
-  - Download Converted Files
-  - Individual WebP files (Download text link on each file Queue)
+  - Automatic per-file download immediately after conversion completes.
+  - Individual converted files remain available through the "Download" link on each Queue item.
   - Multiple files as Zip File (Download ALL button)
-  - Add/Remove files in the Processing Queue
+  - Add/Remove files in the Queue
+  - Clear Queue is enabled only when queued items exist.
 - Data Points per File
-  - file size of original Gif file
-  - file size of resulting converted WebP file
-  - % reduction / difference between size of WebP vs. original GIF
-  - resolution of Gif File
-  - FPS of Gif File
-  - Frame Duration (# of frames in an animated Gif)
+  - file size of original file
+  - file size of resulting converted file
+  - % reduction / difference between converted file vs. original file
+  - resolution of source file
+  - FPS of GIF file
+  - Frame Duration (# of frames in an animated GIF)
   - indication of animation sequence or still image
 - Data Point overall  
   - total time to convert all files in a batch
-- Advanced WebP Conversion Features
-  - WebP Quality (0 - 100)
+- Settings
+  - Output Folder dropdown: Same As Source or Select Folder.
+  - Select Folder uses the browser File System Access API where supported; otherwise the browser's normal download behavior is used.
+  - File Format dropdown: WebP or AVIF.
+  - WebP uses the existing stable FFmpeg core in `vendor/ffmpeg/`.
+  - AVIF uses an isolated AVIF-only WASM engine in `vendor/jsquash-avif/`; WebP remains on the existing FFmpeg core.
+  - Quality (0 - 100), mapped to WebP qscale or AVIF CRF as appropriate.
   - Compression Level (0-6)
-  - Resize Down (Proportional): set a max width in px; image is proportionally reduced only when source is wider (no upsizing)
-  - Loop Animation (loop indefinitely vs. no looping)
+  - Target File Size for WebP and AVIF using quality binary search.
+  - Resize Down (Proportional): set max width and/or max height in px; image is proportionally reduced only when source exceeds constraints (no upsizing)
+  - Do Not Change Dimensions
+  - Loop Animation (WebP only; disabled for AVIF)
   - Still Image (optimizes conversion for still images)
-  - Lossless Compression (if not checked then Lossy)
-  - Mixed Compression (combined Lossless and Lossy Compression based on content)
+  - Lossless Compression (WebP only; disabled for AVIF)
+  - Mixed Compression (WebP only; disabled for AVIF)
+- UI and Usability
+  - Renamed app UI to "Shrink Ray".
+  - Renamed "Advanced" to "Settings" and "Processing Queue" to "Queue".
+  - Editable numeric value fields next to sliders; typed values update sliders dynamically.
+  - Slider number inputs hide native up/down spinner buttons for a cleaner UI.
+  - Diagnostics uses a switch/toggle instead of a checkbox.
+  - Diagnostics, Queue, Settings, and action button colors were refined for a quieter slate UI.
+  - Queue progress, file names, and status use the Shrink Ray header color.
+  - Dropzone and header helper popups were simplified and restyled.
 
 ---
 
-## 🆕 How it works --> v.4.1
+## 🆕 How it works --> v4.2
 
 1. Open http://localhost:3000 in a browser.
 
@@ -228,7 +251,7 @@ If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm
 
 ![image info](./images/GIF_WebP_Converter_UI_B_v001.png)
 ---
-3. Make changes to how you would like to process/convert your images in the Advanced Section by clicking on the bar titled "Advanced" and expanding to see the options. (NOTE: the defaults work well 90% of the time.)
+3. Make changes to how you would like to process/convert your images in the Settings section by clicking on the bar titled "Settings" and expanding to see the options. (NOTE: the defaults work well 90% of the time.)
 
 ![image info](./images/GIF_WebP_Converter_UI_C_v001.png)
 ---
@@ -242,20 +265,63 @@ If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm
 
 ---
 
-## 🆕 ChangeLog --> v.4.1
+## 🆕 ChangeLog --> v4.2
+
+**Changes Since the February 16 Update**  
+- Rebranded the browser UI from "Image → WebP Converter" / "PicPress" to **Shrink Ray**.
+- Added a privacy subhead: "No upload. Privacy first. Your files are processed locally and stay on your computer."
+- Added **AVIF output** alongside WebP.
+- Added a **File Output** area in Settings:
+  - Output Folder dropdown with Same As Source and Select Folder.
+  - Folder picker field and Browse button shown only when Select Folder is chosen.
+  - File Format dropdown with WebP and AVIF.
+- Added **Target File Size** quality search for both WebP and AVIF conversions.
+- Renamed **WebP Quality** to **Quality** and mapped it to:
+  - WebP `-qscale`
+  - AVIF `-crf`
+- Disabled WebP-only controls automatically when AVIF is selected:
+  - Lossless Compression
+  - Mixed Compression
+  - Loop Animation
+- Added editable numeric slider value fields for:
+  - Quality
+  - Compression Level
+  - Max Height
+  - Max Width
+  - Max File Size
+- Removed native number-input spinner buttons from those value fields.
+- Added Max Height Constraint and Do Not Change Dimensions controls.
+- Renamed **Advanced** to **Settings**.
+- Renamed **Processing Queue** to **Queue**.
+- Added automatic Clear Queue enable/disable behavior based on queue contents.
+- Refined Queue styling:
+  - file names, status text, and progress bar use the Shrink Ray header color
+  - metadata under file names uses the privacy subhead color
+  - Download and Remove links are smaller
+- Replaced the Diagnostics checkbox with a palette-matched switch/toggle.
+- Restyled Diagnostics Clear and Copy buttons to match primary action-button styling.
+- Refined header, dropzone, Settings, Queue, and tooltip colors.
+- Simplified helper popups:
+  - Shrink Ray popup now references README, local processing, and supported input formats
+  - dropzone popup now says "gif, png or jpg"
+- Reduced the header and dropzone info icons for a cleaner visual hierarchy.
+- Added selected-folder saving through the browser File System Access API when supported.
+
+**Browser Security Note**  
+- A web page cannot silently discover or write to the original source file's folder from a standard file input or drag/drop. "Same As Source" remains the default UI intent, but actual custom-folder writing requires the user to choose **Select Folder** and grant browser permission.
 
 **Feature Enhancements**  
 - Added ability to **remove individual files** from the processing queue before conversion:  
-  - Each queued item now includes a **“Remove”** link (styled identically to “Download”).  
+  - Each queued item now includes a **“Remove”** link.  
   - Clicking “Remove” instantly hides the item from the UI and excludes it from processing.  
   - All “Remove” links automatically hide when conversion begins.  
 - **Per-file download improvements:**  
-  - Each “.webp” download filename now appends a timestamp in `_MMDDYYYY_HHMM` format (e.g. `clip_v001_11112025_0655.webp`).  
+  - Each converted download filename now appends a timestamp in `_MMDDYYYY_HHMM` format (e.g. `clip_v001_11112025_0655.webp`).  
 - **Batch download improvements:**  
   - “Download ALL” zip files now include a timestamped suffix in the same format  
     (e.g. `converted_webp_files_11112025_064025.zip`).  
 - **Header and layout refinements:**  
-  - “Advanced” and “Processing Queue” headers are now centered.  
+  - “Settings” and “Queue” headers are now centered.  
   - Clear Queue also clears any displayed “Files converted in …” aggregate timing message.  
 - Internal updates to `ui-extensions.js` and `app.js` to support placement consistency between “Remove” and “Download”, and improve dynamic filename updates.
 
@@ -331,7 +397,7 @@ This directory contains all the JavaScript code that makes your application work
     * Loading FFmpeg.
     * Setting up all the main event listeners (drag-and-drop, file input, Start, Clear, Download All).
     * Initializing the conversion queue from `queueManager.js`.
-    * Grabbing the user's settings (like quality, loop, etc.) from the UI.
+    * Grabbing the user's settings (like output format, quality, output folder, loop, etc.) from the UI.
     * Telling the queue to start when the "Start Conversion" button is clicked.
 * `src/boot.js`: This is a tiny helper script. Its only job is to load the main `app.js` file as a "module" (`<script type="module">`). This is required to use modern `import` and `export` features.
 
@@ -339,9 +405,13 @@ This directory contains all the JavaScript code that makes your application work
 
 These files break the application's logic into clean, reusable pieces.
 
-* `src/modules/ffmpegClient.js`: This is the **conversion engine**. It's the only file that knows how to talk to the FFmpeg library.
-    * `initFFmpeg`: Loads the FFmpeg WebAssembly files from `/vendor/ffmpeg/`.
-    * `convertToWebP`: Takes a GIF file and your settings, runs the `ffmpeg` command, and reports progress.
+* `src/modules/ffmpegClient.js`: This is the **WebP conversion engine**. It talks to the stable FFmpeg WebAssembly core in `/vendor/ffmpeg/`.
+    * `initFFmpeg`: Loads the WebP FFmpeg WebAssembly core.
+    * `convertToWebP`: Takes a source image and your settings, runs the WebP `ffmpeg` command, and reports progress.
+* `src/modules/avifClient.js`: This is the **AVIF conversion engine**. It uses the isolated `@jsquash/avif` WASM encoder vendored in `/vendor/jsquash-avif/`.
+    * `hasAvifEngineFiles`: Checks whether the AVIF WASM engine files are present before enabling AVIF in the File Format dropdown.
+    * `convertToAvif`: Converts still images, and the first frame of animated inputs, to AVIF. Target File Size uses the same quality binary-search pattern as WebP.
+    * AVIF encoding runs in `src/modules/avifWorker.js` so slower AVIF compression does not block the browser UI thread.
 * `src/modules/ui.js`: This file is responsible for **all changes to the web page**. It doesn't know *how* to convert a file, but it knows how to *show* the process.
     * It creates the file items in the queue when you drop them.
     * It updates the progress bar (`updateItemProgress`).
@@ -354,7 +424,8 @@ These files break the application's logic into clean, reusable pieces.
     * Its `run` function starts all the conversion tasks in parallel.
     * Its `clear` function removes all files from the UI.
 * `src/modules/gifInfo.js`: This is a utility that **reads GIF metadata**. It quickly reads the file to get information like frame count and framerate (FPS) *without* needing to use the heavy FFmpeg library. This is why you see that info instantly when you add a file.
-* `src/ui-extensions.js` & `src/modules/perFrameMixer.js`: These files are **currently not used** in the application. They are likely placeholders or remnants from an earlier version.
+* `src/ui-extensions.js`: This module handles collapsible sections, diagnostics interactions, info popups, file-size summaries, remove links, download filename updates, and batch timing.
+* `src/modules/perFrameMixer.js`: Experimental/auxiliary logic retained in the repo but not part of the main conversion path.
 
 ### Server & Configuration
 
@@ -363,7 +434,7 @@ These files break the application's logic into clean, reusable pieces.
     2.  Serve all your other assets (JavaScript, CSS, and the FFmpeg files).
     3.  Set the special `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` security headers. These are **required** by browsers to enable `SharedArrayBuffer`, which FFmpeg.js needs for performance.
 * `package.json`: This is the project's **manifest**. It lists your project's dependencies (like Tailwind CSS) and defines your `npm` scripts (`serve`, `build:css`).
-* `index.html`: The **single HTML page** for the entire application. It contains the HTML structure for the dropzone, buttons, settings panel, and the results list.
+* `index.html`: The **single HTML page** for the entire application. It contains the HTML structure for the dropzone, buttons, Settings panel, Diagnostics panel, Queue, and results list.
 
 ### Styling & Vendor Files
 
@@ -371,7 +442,8 @@ These files break the application's logic into clean, reusable pieces.
 * `vendor/css/tailwind.css`: This is the **output CSS file** that is actually loaded by `index.html`. It is the generated result of running `npm run build:css`.
 * `tailwind.config.js`: The **configuration file for Tailwind CSS**.
 * `postcss.config.js`: The configuration file for PostCSS, the tool that runs Tailwind.
-* `vendor/ffmpeg/`: This folder contains the **pre-compiled FFmpeg.js library**. These are the "magic" files that perform the actual conversion.
+* `vendor/ffmpeg/`: This folder contains the **stable WebP FFmpeg.js core** and shared FFmpeg UMD loader used by the app.
+* `vendor/jsquash-avif/`: This folder contains the isolated **AVIF WASM encoder** from `@jsquash/avif`.
 * `vendor/jszip/`: This folder contains the **JSZip library**, which is used by the "Download All" button to create a `.zip` file in your browser.
 
 ---
@@ -381,7 +453,8 @@ These files break the application's logic into clean, reusable pieces.
 The top banner shows `ffmpeg-core.js`, `ffmpeg-core.wasm`, and `ffmpeg-core.worker.js` with a linear progress bar and a `n/3 complete` counter.
 
 ### Troubleshooting
-- If FFmpeg fails to load: ensure `vendor/ffmpeg/` contains valid MT UMD chunks.
+- If WebP FFmpeg fails to load: ensure `vendor/ffmpeg/` contains valid MT UMD chunks.
+- If AVIF is unavailable: ensure `vendor/jsquash-avif/codec/enc/avif_enc.js` and `vendor/jsquash-avif/codec/enc/avif_enc.wasm` are present.
 - If downloads fail: ensure JSZip is accessible from `vendor/jszip/`.
 - For performance testing, use Chrome or Edge with multi-thread WebAssembly enabled.
 
@@ -394,7 +467,7 @@ This app uses `script-src 'self' 'wasm-unsafe-eval'`. Do **not** import JSZip fr
 
 - **Resolution detection:** Determines GIF dimensions using object URLs.
 - **File size management:** Displays GIF and WebP sizes, calculates percent reduction.
-- **Collapsible sections:** Toggles the “Advanced” and “Processing Queue” UI.
+- **Collapsible sections:** Toggles the “Settings”, “Diagnostics”, and “Queue” UI.
 - **Timing utilities:** Tracks and displays aggregate batch conversion time.
 
 Exposed via `window.UIExt` for internal use in `app.js`.

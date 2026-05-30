@@ -1,15 +1,23 @@
 import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta } from './modules/ui.js';
 import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
+import { convertToAvif, hasAvifEngineFiles, initAvifEngine } from './modules/avifClient.js';
 import { log } from './modules/logger.js';
 import { createConversionQueue } from './modules/queueManager.js';
 import { getGifInfo } from './modules/gifInfo.js';
 
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
-let ffmpeg=null, ffmpegReady=false, queued=0; const converted=new Map();
+let webpFfmpeg=null, ffmpegReady=false, queued=0; const converted=new Map();
+const enabledActionTextColor = '#94a3b8';
+const disabledActionTextColor = '#080c13';
+const WEBP_CORE_BASE = '/vendor/ffmpeg';
+const AVIF_ENGINE_BASE = '/vendor/jsquash-avif';
 
 const removedIds = new Set();
 const fileToId = new WeakMap();
+let outputDirectoryHandle = null;
+let avifEngineAvailable = false;
+let avifLoadingPromise = null;
 
 function formatTimestamp(d=new Date()) {
   const pad = (n)=> String(n).padStart(2,'0');
@@ -20,6 +28,31 @@ function formatTimestamp(d=new Date()) {
   const mm = pad(d.getMinutes());
   const ss = pad(d.getSeconds());
   return `${MM}${DD}${YYYY}_${hh}${mm}${ss}`;
+}
+
+function getOutputExtension(name) {
+  const match = String(name || '').match(/\.([^.]+)$/);
+  return match ? match[1].toLowerCase() : 'webp';
+}
+
+async function saveConvertedBlob(blob, filename, settings) {
+  if (settings.outputFolderMode === 'select' && outputDirectoryHandle) {
+    const fileHandle = await outputDirectoryHandle.getFileHandle(filename, { create: true });
+    const stream = await fileHandle.createWritable();
+    await stream.write(blob);
+    await stream.close();
+    return { method: 'folder', filename };
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  return { method: 'downloads', filename };
 }
 
 async function waitForItemEl(id, timeout=1500) {
@@ -42,13 +75,24 @@ function removeFromQueue(id){
   const el = document.getElementById(`item-${id}`);
   if (el) el.remove();
   queued = Math.max(0, queued - 1);
-  if (converted.size === 0) zipBtn.disabled = true;
-  updateStart();
+  updateControls();
 }
 
 status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
+function syncOutputFormatAvailability() {
+  const select = document.getElementById('output-format');
+  const avifOption = select?.querySelector('option[value="avif"]');
+  if (!select || !avifOption) return;
+  avifOption.disabled = !avifEngineAvailable;
+  avifOption.textContent = avifEngineAvailable ? 'AVIF' : 'AVIF (install engine)';
+  if (!avifEngineAvailable && select.value === 'avif') {
+    select.value = 'webp';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  updateControls();
+}
 function getSettings(){
   const maxWidthEnabled = document.getElementById('max-width-toggle')?.checked ?? true;
   const resizeWidthRaw = parseInt(document.getElementById('resize-width')?.value, 10);
@@ -60,6 +104,8 @@ function getSettings(){
   const targetSizeKBRaw = parseInt(document.getElementById('target-size-kb')?.value, 10);
   const targetSizeKB = Number.isFinite(targetSizeKBRaw) && targetSizeKBRaw > 0 ? targetSizeKBRaw : null;
   return {
+    outputFolderMode: document.getElementById('output-folder-mode')?.value || 'source',
+    outputFormat: document.getElementById('output-format')?.value || 'webp',
     quality: parseInt(document.getElementById('quality').value,10)||90,
     compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
     loop: document.getElementById('loop-toggle').checked,
@@ -75,13 +121,54 @@ function getSettings(){
     targetSizeKB
   };
 }
-function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
+function syncActionButtonColor(btn) {
+  if (!btn) return;
+  btn.style.color = btn.disabled ? disabledActionTextColor : enabledActionTextColor;
+}
+function updateControls(){
+  const selectedFormat = document.getElementById('output-format')?.value || 'webp';
+  const formatReady = selectedFormat !== 'avif' || avifEngineAvailable;
+  startBtn.disabled = !(ffmpegReady && formatReady && queued>0);
+  clearBtn.disabled = queued === 0;
+  zipBtn.disabled = converted.size === 0;
+  [startBtn, clearBtn, zipBtn].forEach(syncActionButtonColor);
+}
+syncOutputFormatAvailability();
+async function getEngineForSettings(settings) {
+  if (settings.outputFormat !== 'avif') return webpFfmpeg;
+  if (!avifEngineAvailable) {
+    throw new Error(`AVIF engine is not installed. Add the AVIF WASM encoder at ${AVIF_ENGINE_BASE}.`);
+  }
+  if (!avifLoadingPromise) {
+    status.textContent = 'Loading AVIF engine...';
+    avifLoadingPromise = initAvifEngine().then((engine) => {
+      status.textContent = 'Ready. Please add files.';
+      return engine;
+    }).catch((err) => {
+      avifEngineAvailable = false;
+      syncOutputFormatAvailability();
+      throw err;
+    }).finally(() => {
+      avifLoadingPromise = null;
+      updateControls();
+    });
+  }
+  return avifLoadingPromise;
+}
 (async()=>{
   try{
-    ffmpeg=await initFFmpeg();
-    ffmpegReady=true; status.textContent='Ready. Please add files.'; updateStart();
+    webpFfmpeg=await initFFmpeg({ base: WEBP_CORE_BASE, label: 'WebP engine' });
+    avifEngineAvailable = await hasAvifEngineFiles();
+    if (avifEngineAvailable) {
+      log(`AVIF engine files found at ${AVIF_ENGINE_BASE}. AVIF engine will load on first AVIF conversion.`, 'info');
+    } else {
+      log(`AVIF engine not installed at ${AVIF_ENGINE_BASE}; WebP engine remains active.`, 'warn');
+    }
+    syncOutputFormatAvailability();
+    ffmpegReady=true; status.textContent='Ready. Please add files.'; updateControls();
   }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
 })();
+document.getElementById('output-format')?.addEventListener('change', updateControls);
 
 const queue=createConversionQueue(async (file,ctx)=> {
   const id = fileToId.get(file);
@@ -92,25 +179,27 @@ const queue=createConversionQueue(async (file,ctx)=> {
   log(`Converting: ${file.name}  (${(file.size/1024).toFixed(1)} KB)`, 'info');
   let out;
   try {
-    out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
+    if (ctx.settings.outputFormat === 'avif') {
+      await getEngineForSettings(ctx.settings);
+      out = await convertToAvif(file, ctx.settings, ctx.onProgress);
+    } else {
+      const engine = await getEngineForSettings(ctx.settings);
+      out = await convertToWebP(engine,file,ctx.settings,ctx.onProgress);
+    }
   } catch(err) {
     log(`Error: ${file.name} — ${err?.message || err}`, 'error');
     throw err;
   }
   const reduction = file.size > 0 ? Math.max(0,(1-(out.blob.size/file.size))*100).toFixed(1) : '0.0';
   log(`Done: ${out.name}  ${(out.blob.size/1024).toFixed(1)} KB  (↓ ${reduction}%)`, 'ok');
-  // Auto-download to browser's download folder immediately on conversion complete
+  // Auto-save immediately on conversion complete.
   try {
     const dot = out.name.lastIndexOf('.');
     const base = dot >= 0 ? out.name.slice(0, dot) : out.name;
-    const autoName = `${base}_${formatTimestamp()}.webp`;
-    const autoUrl = URL.createObjectURL(out.blob);
-    const autoA = document.createElement('a');
-    autoA.href = autoUrl; autoA.download = autoName;
-    document.body.appendChild(autoA); autoA.click(); document.body.removeChild(autoA);
-    setTimeout(() => URL.revokeObjectURL(autoUrl), 2000);
-    log(`Auto-downloaded: ${autoName}`, 'info');
-  } catch(e) { log(`Auto-download failed: ${e?.message}`, 'warn'); }
+    const autoName = `${base}_${formatTimestamp()}.${getOutputExtension(out.name)}`;
+    const saved = await saveConvertedBlob(out.blob, autoName, ctx.settings);
+    log(`${saved.method === 'folder' ? 'Saved' : 'Auto-downloaded'}: ${autoName}`, 'info');
+  } catch(e) { log(`Auto-save failed: ${e?.message}`, 'warn'); }
   converted.set(id, out);
   try {
     const el = await waitForItemEl(id, 1500);
@@ -119,14 +208,29 @@ const queue=createConversionQueue(async (file,ctx)=> {
     }
     // ensure per-file Download link has timestamped filename
     if (el && window.UIExt?.updatePerFileDownloadName) {
-      // out.name should be the final filename (.webp). We'll use that as base.
-      window.UIExt.updatePerFileDownloadName(el, out.name || (file.name.replace(/\.[^.]+$/, '') + '.webp'));
+      // out.name should be the final filename. We'll use that as base.
+      const fallbackExt = ctx.settings.outputFormat === 'avif' ? '.avif' : '.webp';
+      window.UIExt.updatePerFileDownloadName(el, out.name || (file.name.replace(/\.[^.]+$/, '') + fallbackExt));
     }
     if (el && window.UIExt?.renderRemoveLink) {
       window.UIExt.renderRemoveLink(el, id, removeFromQueue, 'Remove from Queue');
     }
   } catch {}
   return out;
+});
+
+document.getElementById('output-folder-browse')?.addEventListener('click', async ()=>{
+  const pathInput = document.getElementById('output-folder-path');
+  if (!window.showDirectoryPicker) {
+    alert('Folder selection is not supported by this browser. Converted files will use the browser download behavior.');
+    return;
+  }
+  try {
+    outputDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    if (pathInput) pathInput.value = outputDirectoryHandle.name || 'Selected folder';
+  } catch (e) {
+    if (e?.name !== 'AbortError') alert(`Could not select folder: ${e?.message || e}`);
+  }
 });
 
 fileInput.addEventListener('change', async ()=>{
@@ -144,7 +248,7 @@ dropzone.addEventListener('drop', async e=>{
 });
 
 async function handle(files){
-  const items=await queue.add(files); queued+=items.length; updateStart();
+  const items=await queue.add(files); queued+=items.length; updateControls();
   for(const it of items){
     fileToId.set(it.file, it.id);
     setPlaceholderThumbnail(it.id);
@@ -195,6 +299,7 @@ startBtn.addEventListener('click', async ()=>{
   const s = getSettings();
   const flags = [
     s.lossless ? 'lossless' : `quality=${s.quality}`,
+    `format=${s.outputFormat.toUpperCase()}`,
     `compression=${s.compressionLevel}`,
     s.maxWidthEnabled && s.resizeWidth  ? `maxW=${s.resizeWidth}`  : null,
     s.maxHeightEnabled && s.maxHeight   ? `maxH=${s.maxHeight}`    : null,
@@ -208,13 +313,12 @@ startBtn.addEventListener('click', async ()=>{
   try {
     await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
   } finally {
-    zipBtn.disabled = (converted.size === 0);
-    updateStart();
+    updateControls();
   }
 });
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
-  queue.clear(); queued=0; removedIds.clear(); updateStart(); status.textContent='Ready. Please add files.'; converted.clear(); zipBtn.disabled=true;
+  queue.clear(); queued=0; removedIds.clear(); status.textContent='Ready. Please add files.'; converted.clear(); updateControls();
   const ag = document.getElementById('aggregate-time');
   if (ag) ag.textContent = '';
 });

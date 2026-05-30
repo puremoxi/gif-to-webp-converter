@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image → WebP Converter (FFmpeg MT)</title>
+  <title>Shrink Ray (FFmpeg MT)</title>
   <link rel="stylesheet" href="/vendor/css/tailwind.css" />
   <style>
     /* Diagnostics log — muted scrollbar */
@@ -28,14 +28,25 @@
     input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; background:#94a3b8; border-radius:50%; cursor:pointer; margin-top:-5px; }
     input[type=range]:disabled { background:#1e293b; cursor:not-allowed; }
     input[type=range]:disabled::-webkit-slider-thumb { background:#334155; cursor:not-allowed; }
+    .value-input { text-align:center; outline:none; }
+    .value-input::-webkit-inner-spin-button,
+    .value-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; display:none; }
+    .value-input { appearance:textfield; -moz-appearance:textfield; }
+    .value-input:focus { border-color:#94a3b8 !important; }
+    #advanced-body .form-info-tooltip { color:#64748b !important; font-size:14px !important; }
+    .toggle-input { position:absolute; opacity:0; width:0; height:0; }
+    .toggle-track { width:34px; height:18px; border-radius:999px; background:#111827; border:1px solid #475569; position:relative; transition:background 0.15s,border-color 0.15s; flex-shrink:0; }
+    .toggle-thumb { width:12px; height:12px; border-radius:999px; background:#475569; position:absolute; left:2px; top:2px; transition:transform 0.15s,background 0.15s; }
+    .toggle-input:checked + .toggle-track { background:rgba(51,65,85,0.7); border-color:#94a3b8; }
+    .toggle-input:checked + .toggle-track .toggle-thumb { transform:translateX(16px); background:#94a3b8; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
   <div class="max-w-5xl mx-auto">
     <header class="text-center mb-6">
-      <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">
-        Image → WebP Converter<span id="info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.5em;cursor:help;margin-left:4px;">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="About this tool">
+      <h1 class="text-3xl md:text-4xl font-bold mb-1" style="color:#94a3b8;">
+        Shrink Ray<span id="info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.375em;cursor:help;margin-left:4px;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="About this tool">
             <circle cx="8" cy="8" r="7" stroke="#64748b" stroke-width="1.4"/>
             <text x="8" y="12" text-anchor="middle" fill="#64748b" font-size="9" font-family="Georgia,serif" font-style="italic">i</text>
           </svg>
@@ -43,30 +54,21 @@
             <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:7px solid #475569;"></div>
             <div style="position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #1e293b;"></div>
             <ul style="margin:0;padding-left:16px;list-style:disc;">
-              <li>Refer to README for proper installation of this tool.</li>
+              <li>Refer to README for proper installation.</li>
               <li>All files processed on local machine.</li>
-              <li>Multi-threaded FFmpeg WASM (core-mt). Place UMD files in <code style="font-family:monospace;background:#0f172a;padding:1px 4px;border-radius:4px;color:#94a3b8">vendor/ffmpeg/</code>.</li>
+              <li>gif, jpg and png currently supported.</li>
             </ul>
           </div>
         </span>
       </h1>
+      <p style="font-size:12px;font-style:italic;color:#64748b;">No upload. Privacy first. Your files are processed locally and stay on your computer.</p>
     </header>
 
     <div id="dropzone" class="relative border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center transition-all duration-300 hover:border-gray-500 mb-2" style="max-width:700px;margin-left:auto;margin-right:auto;border-width:2px;">
       <input type="file" id="fileInput" multiple accept="image/gif,image/png,image/jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Choose image files"/>
       <div class="pointer-events-none select-none">
-        <p class="text-xl font-medium" style="color:#2563eb">Drag &amp; Drop</p>
-        <p class="text-gray-400">or click to select files<span id="drop-info-icon" style="display:inline-block;vertical-align:super;font-size:0.5em;cursor:help;position:relative;pointer-events:auto;z-index:20;margin-left:2px;">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="5" cy="5" r="4" stroke="#9ca3af" stroke-width="1.2"/>
-              <text x="5" y="8.5" text-anchor="middle" fill="#9ca3af" font-size="6" font-family="Georgia,serif" font-style="italic">i</text>
-            </svg>
-            <div id="drop-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:16px;z-index:50;width:200px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-              <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div>
-              <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>
-              You can convert gif, png or jpg files.
-            </div>
-          </span></p>
+        <p class="text-xl font-medium" style="color:#94a3b8">Drag &amp; Drop</p>
+        <p style="font-size:12px;font-style:italic;color:#64748b;">or click to select files</p>
       </div>
       <p id="converter-status" style="position:absolute;bottom:10px;right:14px;padding:3px 10px;border-radius:6px;border:1px solid #374151;background:transparent;font-size:12px;color:#374151;pointer-events:none;user-select:none;"></p>
     </div>
@@ -74,72 +76,96 @@
     <div id="batch-time" class="mb-4 text-sm text-slate-300 text-center" style="max-width:700px;margin-left:auto;margin-right:auto;"></div>
 
     <div style="display:flex;gap:8px;max-width:700px;margin:12px auto;">
-      <button id="start-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#e2e8f0;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Start Conversion</button>
-      <button id="clear-button" style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#e2e8f0;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear Queue</button>
-      <button id="download-all" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#e2e8f0;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Download ALL</button>
+      <button id="start-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#080c13;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Start Conversion</button>
+      <button id="clear-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#080c13;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear Queue</button>
+      <button id="download-all" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#080c13;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Download ALL</button>
     </div>
 
     <section id="advanced" class="mb-4" style="max-width:700px;margin-left:auto;margin-right:auto;">
       <button id="advanced-toggle"
               class="w-full text-left font-semibold py-2 px-3 rounded-lg bg-slate-700/70 border border-slate-600 hover:bg-slate-700 transition"
+              style="color:#94a3b8;"
               aria-expanded="false"
               aria-controls="advanced-body">
-        Advanced
+        Settings
       </button>
-      <div id="advanced-body" class="mt-3" hidden>
+      <div id="advanced-body" class="mt-3" style="color:#64748b;font-size:14px;" hidden>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+          <div style="grid-column:1 / -1;display:flex;flex-direction:column;gap:12px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">File Output</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <label class="space-y-1">
+                <div>Output Folder</div>
+                <select id="output-folder-mode" style="width:100%;height:32px;border:1px solid #64748b;border-radius:6px;background:#111827;color:#64748b;padding:0 8px;">
+                  <option value="source" selected>Same As Source</option>
+                  <option value="select">Select Folder</option>
+                </select>
+              </label>
+              <label class="space-y-1">
+                <div>File Format</div>
+                <select id="output-format" style="width:100%;height:32px;border:1px solid #64748b;border-radius:6px;background:#111827;color:#64748b;padding:0 8px;">
+                  <option value="webp" selected>WebP</option>
+                  <option value="avif">AVIF</option>
+                </select>
+              </label>
+            </div>
+            <div id="output-folder-picker" hidden style="display:none;gap:8px;align-items:center;">
+              <input id="output-folder-path" type="text" value="Downloads" readonly aria-label="Selected output folder" style="flex:1;height:32px;border:1px solid #64748b;border-radius:6px;background:transparent;color:#64748b;padding:0 8px;"/>
+              <button id="output-folder-browse" type="button" style="height:32px;border:1px solid #475569;border-radius:8px;background:rgba(51,65,85,0.7);color:#94a3b8;padding:0 14px;font-weight:600;cursor:pointer;transition:border-color 0.15s;">Browse</button>
+            </div>
+          </div>
 
           <!-- Column 1: Quality & Compression + Animation & Mode -->
           <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;padding-bottom:6px;border-bottom:1px solid #334155;">Quality &amp; Compression</div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Quality &amp; Compression</div>
             <label id="quality-label" class="space-y-1">
-              <div style="display:flex;align-items:center;gap:4px;">WebP Quality<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:220px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>When "Lossless Compression" is enabled, this quality slider is ignored.</div></span></div>
+              <div style="display:flex;align-items:center;gap:4px;">Quality<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:260px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>When "Lossless Compression" is enabled for WebP conversions, this quality slider is ignored.</div></span></div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <input id="quality" type="range" min="0" max="100" value="90" style="flex:1;"/>
-                <div id="quality-value" style="width:40px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#cbd5e1;flex-shrink:0;background:transparent;">90</div>
+                <input id="quality-value" class="value-input" type="number" min="0" max="100" value="90" aria-label="Quality value" style="width:40px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
               </div>
             </label>
             <label class="space-y-1">
               <div style="display:flex;align-items:center;gap:4px;">Compression Level<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:200px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>0 (fastest) → 6 (best compression). Applies in both lossy and lossless modes.</div></span></div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <input id="compression-level" type="range" min="0" max="6" value="6" style="flex:1;"/>
-                <div id="compression-level-value" style="width:40px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#cbd5e1;flex-shrink:0;background:transparent;">6</div>
+                <input id="compression-level-value" class="value-input" type="number" min="0" max="6" value="6" aria-label="Compression Level value" style="width:40px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
               </div>
             </label>
             <div style="height:1px;background:#334155;margin:6px 0;"></div>
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;padding-bottom:6px;border-bottom:1px solid #334155;">Animation &amp; Mode</div>
-            <label id="loop-label" class="inline-flex items-center gap-2"><input type="checkbox" id="loop-toggle" checked/> Loop Animation</label>
-            <label class="inline-flex items-center gap-2"><input type="checkbox" id="still-toggle"/> Still Image</label>
-            <label id="lossless-label" class="inline-flex items-center gap-2"><input type="checkbox" id="lossless-toggle"/> Lossless Compression</label>
-            <label id="mixed-label" class="inline-flex items-center gap-2"><input type="checkbox" id="mixed-toggle"/> Mixed Compression</label>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Animation &amp; Mode</div>
+            <label id="loop-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="loop-toggle" checked/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Loop Animation</span></label>
+            <label class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="still-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Still Image</span></label>
+            <label id="lossless-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="lossless-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Lossless Compression</span></label>
+            <label id="mixed-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="mixed-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Mixed Compression</span></label>
           </div>
 
           <!-- Column 2: Dimensions & File Size -->
           <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;padding-bottom:6px;border-bottom:1px solid #334155;">Dimensions &amp; File Size</div>
-            <label id="ncd-label" class="inline-flex items-center gap-2"><input type="checkbox" id="no-change-dimensions-toggle"/> Do Not Change Dimensions</label>
-            <label id="max-height-toggle-label" class="inline-flex items-center gap-2"><input type="checkbox" id="max-height-toggle"/> Max Height Constraint</label>
-            <label id="max-width-toggle-label" class="inline-flex items-center gap-2"><input type="checkbox" id="max-width-toggle" checked/> Max Width Constraint</label>
-            <label id="target-size-toggle-label" class="inline-flex items-center gap-2"><input type="checkbox" id="target-size-toggle"/> Target File Size</label>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Dimensions &amp; File Size</div>
+            <label id="ncd-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="no-change-dimensions-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Do Not Change Dimensions</span></label>
+            <label id="max-height-toggle-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="max-height-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Max Height Constraint</span></label>
+            <label id="max-width-toggle-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="max-width-toggle" checked/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Max Width Constraint</span></label>
+            <label id="target-size-toggle-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="target-size-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Target File Size</span></label>
             <label id="resize-height-label" class="space-y-1">
               <div style="display:flex;align-items:center;gap:4px;">Max Height (px)<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:200px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>Only downsizes when source height exceeds this value. Never upsizes.</div></span></div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <input id="resize-height" type="range" min="1" max="8192" value="1080" style="flex:1;"/>
-                <div id="resize-height-value" style="min-width:50px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#cbd5e1;flex-shrink:0;background:transparent;padding:0 4px;">1080</div>
+                <input id="resize-height-value" class="value-input" type="number" min="1" max="8192" value="1080" aria-label="Max Height value" style="min-width:50px;width:58px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
               </div>
             </label>
             <label id="resize-width-label" class="space-y-1">
               <div style="display:flex;align-items:center;gap:4px;">Max Width (px)<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:200px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>Only downsizes when source width exceeds this value. Never upsizes.</div></span></div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <input id="resize-width" type="range" min="1" max="8192" value="1200" style="flex:1;"/>
-                <div id="resize-width-value" style="min-width:50px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#cbd5e1;flex-shrink:0;background:transparent;padding:0 4px;">1200</div>
+                <input id="resize-width-value" class="value-input" type="number" min="1" max="8192" value="1200" aria-label="Max Width value" style="min-width:50px;width:58px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
               </div>
             </label>
             <label id="target-size-label" class="space-y-1">
               <div style="display:flex;align-items:center;gap:4px;">Max File Size (KB)<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:200px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>Auto-adjusts quality via binary search to hit this size. Overrides the quality slider.</div></span></div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <input id="target-size-kb" type="range" min="1" max="20000" value="200" style="flex:1;"/>
-                <div id="target-size-value" style="min-width:54px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#cbd5e1;flex-shrink:0;background:transparent;padding:0 4px;">200</div>
+                <input id="target-size-value" class="value-input" type="number" min="1" max="20000" value="200" aria-label="Max File Size value" style="min-width:54px;width:64px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
               </div>
             </label>
           </div>
@@ -151,18 +177,21 @@
     <section id="diagnostics" style="margin-bottom:1rem;max-width:700px;margin-left:auto;margin-right:auto;">
       <button id="diagnostics-toggle"
               class="w-full text-left font-semibold py-2 px-3 rounded-lg bg-slate-700/70 border border-slate-600 hover:bg-slate-700 transition"
+              style="color:#94a3b8;"
               aria-expanded="false"
               aria-controls="diagnostics-body">
         Diagnostics
       </button>
       <div id="diagnostics-body" class="mt-3" hidden>
         <div class="flex items-center justify-between mb-2">
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" id="diag-toggle"/> Enable Diagnostic Logging
+          <label id="diag-toggle-label" class="inline-flex items-center gap-2 text-sm" style="color:#475569;cursor:pointer;">
+            <input class="toggle-input" type="checkbox" id="diag-toggle"/>
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+            <span>Enable Diagnostic Logging</span>
           </label>
           <div class="flex gap-2">
-            <button id="diag-clear" style="font-size:12px;font-weight:600;padding:6px 16px;border-radius:8px;background:#dc2626;color:#fff;border:none;cursor:pointer;">Clear</button>
-            <button id="diag-copy" style="font-size:12px;font-weight:600;padding:6px 16px;border-radius:8px;background:#2563eb;color:#fff;border:none;cursor:pointer;">Copy</button>
+            <button id="diag-clear" style="font-size:14px;font-weight:600;padding:8px 16px;border-radius:8px;background:rgba(51,65,85,0.7);border:1px solid #475569;color:#94a3b8;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear</button>
+            <button id="diag-copy" style="font-size:14px;font-weight:600;padding:8px 16px;border-radius:8px;background:rgba(51,65,85,0.7);border:1px solid #475569;color:#94a3b8;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Copy</button>
           </div>
         </div>
         <div style="border:1px solid #334155;border-radius:8px;overflow:hidden;">
@@ -186,9 +215,10 @@
     <section id="processing-queue" class="mb-4" style="max-width:700px;margin-left:auto;margin-right:auto;">
       <button id="processing-queue-toggle"
               class="w-full text-left font-semibold py-2 px-3 rounded-lg bg-slate-700/70 border border-slate-600 hover:bg-slate-700 transition"
+              style="color:#94a3b8;"
               aria-expanded="true"
               aria-controls="processing-queue-body">
-        Processing Queue
+        Queue
       </button>
       <div id="processing-queue-body" class="mt-3">
         <div id="aggregate-time" class="text-sm text-slate-300 mb-2 text-center"></div>

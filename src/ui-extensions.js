@@ -22,6 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCollapsible('advanced-toggle', 'advanced-body', false);
   setupCollapsible('diagnostics-toggle', 'diagnostics-body', false);
 
+  const diagToggle = document.getElementById('diag-toggle');
+  const diagToggleLabel = document.getElementById('diag-toggle-label');
+  const syncDiagToggleColor = () => {
+    if (!diagToggleLabel || !diagToggle) return;
+    diagToggleLabel.style.color = diagToggle.checked ? '#64748b' : '#475569';
+  };
+  diagToggle?.addEventListener('change', syncDiagToggleColor);
+  syncDiagToggleColor();
+
   // Diag log clear / copy
   document.getElementById('diag-clear')?.addEventListener('click', () => {
     const log = document.getElementById('diag-log');
@@ -35,18 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .map(el => el.textContent).join('\n');
     navigator.clipboard.writeText(text).catch(() => {});
   });
-
-  // Clear / Copy button hover colours
-  const diagClear = document.getElementById('diag-clear');
-  const diagCopy  = document.getElementById('diag-copy');
-  if (diagClear) {
-    diagClear.addEventListener('mouseenter', () => { diagClear.style.background = '#b91c1c'; });
-    diagClear.addEventListener('mouseleave', () => { diagClear.style.background = '#dc2626'; });
-  }
-  if (diagCopy) {
-    diagCopy.addEventListener('mouseenter', () => { diagCopy.style.background = '#1d4ed8'; });
-    diagCopy.addEventListener('mouseleave', () => { diagCopy.style.background = '#2563eb'; });
-  }
 
   // Diagnostics log resize handle (drag to resize)
   const diagLog    = document.getElementById('diag-log');
@@ -92,31 +89,26 @@ document.addEventListener('DOMContentLoaded', () => {
     icon.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
   });
 
-  // Drop zone info icon tooltip
-  const dropInfoIcon    = document.getElementById('drop-info-icon');
-  const dropInfoTooltip = document.getElementById('drop-info-tooltip');
-  if (dropInfoIcon && dropInfoTooltip) {
-    dropInfoIcon.addEventListener('mouseenter', () => { dropInfoTooltip.style.display = 'block'; });
-    dropInfoIcon.addEventListener('mouseleave', () => { dropInfoTooltip.style.display = 'none'; });
-  }
-
-  // Action button hover: colour text + border, skip when disabled
+  // Action button hover: tint border only, skip when disabled
   function addActionHover(id, hoverColor) {
     const btn = document.getElementById(id);
     if (!btn) return;
+    const baseBackground = btn.style.background || '';
     btn.addEventListener('mouseenter', () => {
       if (btn.disabled) return;
-      btn.style.color = hoverColor;
+      btn.style.background = 'rgba(71,85,105,0.85)';
       btn.style.borderColor = hoverColor;
     });
     btn.addEventListener('mouseleave', () => {
-      btn.style.color = '#e2e8f0';
+      btn.style.background = baseBackground;
       btn.style.borderColor = '#475569';
     });
   }
   addActionHover('start-button',  '#2563eb');
   addActionHover('clear-button',  '#dc2626');
   addActionHover('download-all',  '#10b981');
+  addActionHover('diag-clear',  '#dc2626');
+  addActionHover('diag-copy',  '#2563eb');
 });
 
 function findMetaLine(queueItemEl) {
@@ -194,27 +186,48 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
 }
 
 // --------- Remove control placed where Download appears ---------
+function styleQueueIconButton(el) {
+  el.style.width = '17.5px';
+  el.style.height = '17.5px';
+  el.style.borderRadius = '5px';
+  el.style.display = 'inline-flex';
+  el.style.alignItems = 'center';
+  el.style.justifyContent = 'center';
+  el.style.padding = '0';
+  el.style.margin = '0';
+  el.style.cursor = 'pointer';
+  el.style.boxSizing = 'border-box';
+  el.style.verticalAlign = 'middle';
+}
+
+function removeIconSvg() {
+  return '<svg width="11.25" height="11.25" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 3l6 6M9 3 3 9" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round"/></svg>';
+}
+
 function renderRemoveLink(queueItemEl, id, onRemove, label) {
   const actionsEl = findActionsEl(queueItemEl);
   if (!actionsEl) return;
-    const text = label || 'Remove';
-    const isDanger = true;
   const existing = queueItemEl.querySelector('.remove-link');
   if (existing) {
-    existing.textContent = text;
-    existing.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
-    existing.style.display = 'inline-flex';
-    existing.style.color = '#f87171';
+    existing.className = 'remove-link';
+    existing.innerHTML = removeIconSvg();
+    existing.title = label || 'Remove';
+    existing.setAttribute('aria-label', label || 'Remove');
+    styleQueueIconButton(existing);
+    existing.style.background = '#1e293b';
+    existing.style.border = '1px solid #475569';
     return;
   }
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  // Exact match of Download style per request
-  btn.className = `remove-link font-semibold hover:underline mr-3 ${isDanger ? 'text-red-400' : 'text-blue-400'}`;
-  btn.textContent = text;
-  btn.style.display = 'inline-flex';
-  btn.style.color = '#f87171';
+  btn.className = 'remove-link';
+  btn.innerHTML = removeIconSvg();
+  btn.title = label || 'Remove';
+  btn.setAttribute('aria-label', label || 'Remove');
+  styleQueueIconButton(btn);
+  btn.style.background = '#1e293b';
+  btn.style.border = '1px solid #475569';
   btn.addEventListener('click', () => {
     queueItemEl.style.display = 'none';
     try { onRemove && onRemove(id); } catch {}
@@ -248,7 +261,8 @@ function updatePerFileDownloadName(queueItemEl, finalName) {
   const targetName = (() => {
     const dot = (finalName || '').lastIndexOf('.');
     const base = dot >= 0 ? finalName.slice(0, dot) : (finalName || 'converted');
-    return `${base}_${tsNow()}.webp`;
+    const ext = dot >= 0 ? finalName.slice(dot) : '.webp';
+    return `${base}_${tsNow()}${ext}`;
   })();
 
   // Anchor might be injected slightly after conversion; poll briefly
