@@ -1,5 +1,6 @@
 import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta } from './modules/ui.js';
 import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
+import { log } from './modules/logger.js';
 import { createConversionQueue } from './modules/queueManager.js';
 import { getGifInfo } from './modules/gifInfo.js';
 
@@ -49,9 +50,15 @@ status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
 function getSettings(){
-  const resizeEnabled = document.getElementById('resize-toggle')?.checked;
+  const maxWidthEnabled = document.getElementById('max-width-toggle')?.checked ?? true;
   const resizeWidthRaw = parseInt(document.getElementById('resize-width')?.value, 10);
   const resizeWidth = Number.isFinite(resizeWidthRaw) && resizeWidthRaw > 0 ? resizeWidthRaw : null;
+  const maxHeightEnabled = document.getElementById('max-height-toggle')?.checked ?? false;
+  const maxHeightRaw = parseInt(document.getElementById('resize-height')?.value, 10);
+  const maxHeight = Number.isFinite(maxHeightRaw) && maxHeightRaw > 0 ? maxHeightRaw : null;
+  const targetSizeEnabled = document.getElementById('target-size-toggle')?.checked ?? false;
+  const targetSizeKBRaw = parseInt(document.getElementById('target-size-kb')?.value, 10);
+  const targetSizeKB = Number.isFinite(targetSizeKBRaw) && targetSizeKBRaw > 0 ? targetSizeKBRaw : null;
   return {
     quality: parseInt(document.getElementById('quality').value,10)||90,
     compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
@@ -59,8 +66,13 @@ function getSettings(){
     still: document.getElementById('still-toggle').checked,
     lossless: document.getElementById('lossless-toggle').checked,
     mixed: document.getElementById('mixed-toggle').checked,
-    resizeEnabled,
-    resizeWidth
+    maxWidthEnabled,
+    resizeWidth,
+    noChangeDimensions: document.getElementById('no-change-dimensions-toggle')?.checked ?? false,
+    maxHeightEnabled,
+    maxHeight,
+    targetSizeEnabled,
+    targetSizeKB
   };
 }
 function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
@@ -74,9 +86,31 @@ function updateStart(){ startBtn.disabled = !(ffmpegReady && queued>0); }
 const queue=createConversionQueue(async (file,ctx)=> {
   const id = fileToId.get(file);
   if (removedIds.has(id)) {
+    log(`Skipped: ${file.name} (removed from queue)`, 'warn');
     return { skipped: true, blob: null, name: null };
   }
-  const out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
+  log(`Converting: ${file.name}  (${(file.size/1024).toFixed(1)} KB)`, 'info');
+  let out;
+  try {
+    out = await convertToWebP(ffmpeg,file,ctx.settings,ctx.onProgress);
+  } catch(err) {
+    log(`Error: ${file.name} — ${err?.message || err}`, 'error');
+    throw err;
+  }
+  const reduction = file.size > 0 ? Math.max(0,(1-(out.blob.size/file.size))*100).toFixed(1) : '0.0';
+  log(`Done: ${out.name}  ${(out.blob.size/1024).toFixed(1)} KB  (↓ ${reduction}%)`, 'ok');
+  // Auto-download to browser's download folder immediately on conversion complete
+  try {
+    const dot = out.name.lastIndexOf('.');
+    const base = dot >= 0 ? out.name.slice(0, dot) : out.name;
+    const autoName = `${base}_${formatTimestamp()}.webp`;
+    const autoUrl = URL.createObjectURL(out.blob);
+    const autoA = document.createElement('a');
+    autoA.href = autoUrl; autoA.download = autoName;
+    document.body.appendChild(autoA); autoA.click(); document.body.removeChild(autoA);
+    setTimeout(() => URL.revokeObjectURL(autoUrl), 2000);
+    log(`Auto-downloaded: ${autoName}`, 'info');
+  } catch(e) { log(`Auto-download failed: ${e?.message}`, 'warn'); }
   converted.set(id, out);
   try {
     const el = await waitForItemEl(id, 1500);
@@ -158,6 +192,19 @@ startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true;
   if (window.UIExt?.hideAllRemoveLinks) window.UIExt.hideAllRemoveLinks();
   if (window.UIExt?.markBatchStart) window.UIExt.markBatchStart(queued);
+  const s = getSettings();
+  const flags = [
+    s.lossless ? 'lossless' : `quality=${s.quality}`,
+    `compression=${s.compressionLevel}`,
+    s.maxWidthEnabled && s.resizeWidth  ? `maxW=${s.resizeWidth}`  : null,
+    s.maxHeightEnabled && s.maxHeight   ? `maxH=${s.maxHeight}`    : null,
+    s.targetSizeEnabled && s.targetSizeKB ? `targetSize=${s.targetSizeKB}KB` : null,
+    s.noChangeDimensions ? 'no-resize' : null,
+    s.still ? 'still' : 'animated',
+    s.loop  ? 'loop'  : null,
+    s.mixed ? 'mixed' : null,
+  ].filter(Boolean);
+  log(`--- Batch start: ${queued} file(s)  [${flags.join('  ')}] ---`, 'info');
   try {
     await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
   } finally {

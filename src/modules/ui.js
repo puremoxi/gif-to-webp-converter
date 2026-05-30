@@ -1,27 +1,91 @@
 export function setupUI(dropzone, fileInput){
   const q=document.getElementById('quality'), qv=document.getElementById('quality-value');
+  const qualityLabel=document.getElementById('quality-label');
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
   const loss=document.getElementById('lossless-toggle'), mix=document.getElementById('mixed-toggle');
   const loop=document.getElementById('loop-toggle'), still=document.getElementById('still-toggle');
-  const resizeToggle=document.getElementById('resize-toggle'), resizeWidth=document.getElementById('resize-width');
+  const loopLabel=document.getElementById('loop-label'), mixedLabel=document.getElementById('mixed-label'), losslessLabel=document.getElementById('lossless-label');
+  const resizeWidth=document.getElementById('resize-width');
+  const ncd=document.getElementById('no-change-dimensions-toggle'), ncdLabel=document.getElementById('ncd-label');
+  const resizeWidthLabel=document.getElementById('resize-width-label');
+  const maxWidthToggle=document.getElementById('max-width-toggle'), maxWidthToggleLabel=document.getElementById('max-width-toggle-label');
+  const maxHeightToggle=document.getElementById('max-height-toggle'), maxHeightToggleLabel=document.getElementById('max-height-toggle-label');
+  const resizeHeight=document.getElementById('resize-height'), resizeHeightLabel=document.getElementById('resize-height-label');
+  const resizeHeightVal=document.getElementById('resize-height-value'), resizeWidthVal=document.getElementById('resize-width-value');
+  const targetSizeToggle=document.getElementById('target-size-toggle'), targetSizeToggleLabel=document.getElementById('target-size-toggle-label');
+  const targetSizeKb=document.getElementById('target-size-kb'), targetSizeLabel=document.getElementById('target-size-label');
+  const targetSizeVal=document.getElementById('target-size-value');
 
   q.addEventListener('input',()=>{ qv.textContent=String(q.value) });
   cl.addEventListener('input',()=>{ clv.textContent=String(cl.value) });
 
-  function sync(){
-    mix.disabled=loss.checked; if(loss.checked) mix.checked=false;
-    if (resizeToggle && resizeWidth) resizeWidth.disabled = !resizeToggle.checked;
+  function syncNCD(){
+    syncMaxWidth();
+    syncMaxHeight();
   }
-  loss.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
-  resizeToggle?.addEventListener('change', sync);
-  resizeWidth?.addEventListener('change', ()=>{
-    const value = parseInt(resizeWidth.value, 10);
-    if (!Number.isFinite(value) || value < 1) {
-      resizeWidth.value = '1';
-      return;
+  function syncMaxWidth(){
+    const ncdLocked = ncd?.checked;
+    if(maxWidthToggle) maxWidthToggle.disabled = ncdLocked;
+    if(maxWidthToggleLabel){
+      maxWidthToggleLabel.style.color = ncdLocked ? '#64748b' : '';
+      maxWidthToggleLabel.style.pointerEvents = ncdLocked ? 'none' : '';
     }
-    resizeWidth.value = String(value);
-  });
+    const wLocked = ncdLocked || !maxWidthToggle?.checked;
+    if(resizeWidth) resizeWidth.disabled = wLocked;
+    if(resizeWidthVal){ resizeWidthVal.style.borderColor = wLocked ? '#334155' : '#64748b'; resizeWidthVal.style.color = wLocked ? '#475569' : '#cbd5e1'; }
+    if(resizeWidthLabel){ resizeWidthLabel.style.color = wLocked ? '#64748b' : ''; resizeWidthLabel.style.pointerEvents = wLocked ? 'none' : ''; }
+  }
+  function syncMaxHeight(){
+    const ncdLocked = ncd?.checked;
+    if(maxHeightToggle) maxHeightToggle.disabled = ncdLocked;
+    if(maxHeightToggleLabel){ maxHeightToggleLabel.style.color = ncdLocked ? '#64748b' : ''; maxHeightToggleLabel.style.pointerEvents = ncdLocked ? 'none' : ''; }
+    const hLocked = ncdLocked || !maxHeightToggle?.checked;
+    if(resizeHeight) resizeHeight.disabled = hLocked;
+    if(resizeHeightVal){ resizeHeightVal.style.borderColor = hLocked ? '#334155' : '#64748b'; resizeHeightVal.style.color = hLocked ? '#475569' : '#cbd5e1'; }
+    if(resizeHeightLabel){ resizeHeightLabel.style.color = hLocked ? '#64748b' : ''; resizeHeightLabel.style.pointerEvents = hLocked ? 'none' : ''; }
+  }
+  function syncTargetSize(){
+    const tsLocked = !targetSizeToggle?.checked;
+    if(targetSizeKb) targetSizeKb.disabled = tsLocked;
+    if(targetSizeVal){ targetSizeVal.style.borderColor = tsLocked ? '#334155' : '#64748b'; targetSizeVal.style.color = tsLocked ? '#475569' : '#cbd5e1'; }
+    if(targetSizeLabel){ targetSizeLabel.style.color = tsLocked ? '#64748b' : ''; targetSizeLabel.style.pointerEvents = tsLocked ? 'none' : ''; }
+  }
+  function lockEl(el, label, locked){
+    if(el){ el.disabled = locked; }
+    if(label){ label.style.color = locked ? '#64748b' : ''; label.style.pointerEvents = locked ? 'none' : ''; }
+  }
+  function syncQuality(){
+    const locked = loss.checked;
+    if(q) q.disabled = locked;
+    if(qualityLabel){
+      qualityLabel.style.color = locked ? '#64748b' : '';
+      qualityLabel.style.pointerEvents = locked ? 'none' : '';
+    }
+    if(qv){
+      qv.style.borderColor = locked ? '#334155' : '#64748b';
+      qv.style.color = locked ? '#475569' : '#cbd5e1';
+    }
+  }
+  function sync(){
+    const lossLocked = loss.checked;
+    if(lossLocked) mix.checked = false;
+    lockEl(mix, mixedLabel, lossLocked);
+    const mixLocked = mix.checked;
+    if(mixLocked) loss.checked = false;
+    lockEl(loss, losslessLabel, mixLocked);
+    const stillLocked = still.checked;
+    if(stillLocked) loop.checked = false;
+    lockEl(loop, loopLabel, stillLocked);
+    syncQuality();
+  }
+  loss.addEventListener('change',sync); mix.addEventListener('change',sync); still.addEventListener('change',sync); loop.addEventListener('change',sync); sync();
+  ncd?.addEventListener('change', syncNCD); syncNCD();
+  maxWidthToggle?.addEventListener('change', syncMaxWidth); syncMaxWidth();
+  maxHeightToggle?.addEventListener('change', syncMaxHeight); syncMaxHeight();
+  targetSizeToggle?.addEventListener('change', syncTargetSize); syncTargetSize();
+  resizeHeight?.addEventListener('input', ()=>{ if(resizeHeightVal) resizeHeightVal.textContent = resizeHeight.value; });
+  resizeWidth?.addEventListener('input', ()=>{ if(resizeWidthVal) resizeWidthVal.textContent = resizeWidth.value; });
+  targetSizeKb?.addEventListener('input', ()=>{ if(targetSizeVal) targetSizeVal.textContent = targetSizeKb.value; });
 
   ['dragenter','dragover','dragleave','drop'].forEach(n=>{
     dropzone.addEventListener(n,e=>e.preventDefault(),false);

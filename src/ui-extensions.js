@@ -20,6 +20,103 @@ function setupCollapsible(buttonId, bodyId, defaultExpanded) {
 document.addEventListener('DOMContentLoaded', () => {
   setupCollapsible('processing-queue-toggle', 'processing-queue-body', true);
   setupCollapsible('advanced-toggle', 'advanced-body', false);
+  setupCollapsible('diagnostics-toggle', 'diagnostics-body', false);
+
+  // Diag log clear / copy
+  document.getElementById('diag-clear')?.addEventListener('click', () => {
+    const log = document.getElementById('diag-log');
+    if (!log) return;
+    log.innerHTML = '<div id="diag-placeholder" style="color:#64748b;font-style:italic">Log cleared.</div>';
+  });
+  document.getElementById('diag-copy')?.addEventListener('click', () => {
+    const log = document.getElementById('diag-log');
+    if (!log) return;
+    const text = Array.from(log.querySelectorAll('div:not(#diag-placeholder)'))
+      .map(el => el.textContent).join('\n');
+    navigator.clipboard.writeText(text).catch(() => {});
+  });
+
+  // Clear / Copy button hover colours
+  const diagClear = document.getElementById('diag-clear');
+  const diagCopy  = document.getElementById('diag-copy');
+  if (diagClear) {
+    diagClear.addEventListener('mouseenter', () => { diagClear.style.background = '#b91c1c'; });
+    diagClear.addEventListener('mouseleave', () => { diagClear.style.background = '#dc2626'; });
+  }
+  if (diagCopy) {
+    diagCopy.addEventListener('mouseenter', () => { diagCopy.style.background = '#1d4ed8'; });
+    diagCopy.addEventListener('mouseleave', () => { diagCopy.style.background = '#2563eb'; });
+  }
+
+  // Diagnostics log resize handle (drag to resize)
+  const diagLog    = document.getElementById('diag-log');
+  const diagHandle = document.getElementById('diag-resize-handle');
+  if (diagLog && diagHandle) {
+    const setHandleBg = (active) => {
+      diagHandle.style.background = active ? '#263548' : '#1e293b';
+    };
+    diagHandle.addEventListener('mouseenter', () => setHandleBg(true));
+    diagHandle.addEventListener('mouseleave', () => setHandleBg(false));
+    diagHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const startY = e.clientY;
+      const startH = diagLog.offsetHeight;
+      setHandleBg(true);
+      const onMove = (ev) => {
+        const newH = Math.max(128, startH + (ev.clientY - startY));
+        diagLog.style.height = newH + 'px';
+      };
+      const onUp = () => {
+        setHandleBg(false);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  // Header info icon tooltip
+  const infoIcon    = document.getElementById('info-icon');
+  const infoTooltip = document.getElementById('info-tooltip');
+  if (infoIcon && infoTooltip) {
+    infoIcon.addEventListener('mouseenter', () => { infoTooltip.style.display = 'block'; });
+    infoIcon.addEventListener('mouseleave', () => { infoTooltip.style.display = 'none'; });
+  }
+
+  // Generic form field info icon tooltips (Advanced section)
+  document.querySelectorAll('.form-info-icon').forEach(icon => {
+    const tooltip = icon.querySelector('.form-info-tooltip');
+    if (!tooltip) return;
+    icon.addEventListener('mouseenter', () => { tooltip.style.display = 'block'; });
+    icon.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+
+  // Drop zone info icon tooltip
+  const dropInfoIcon    = document.getElementById('drop-info-icon');
+  const dropInfoTooltip = document.getElementById('drop-info-tooltip');
+  if (dropInfoIcon && dropInfoTooltip) {
+    dropInfoIcon.addEventListener('mouseenter', () => { dropInfoTooltip.style.display = 'block'; });
+    dropInfoIcon.addEventListener('mouseleave', () => { dropInfoTooltip.style.display = 'none'; });
+  }
+
+  // Action button hover: colour text + border, skip when disabled
+  function addActionHover(id, hoverColor) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('mouseenter', () => {
+      if (btn.disabled) return;
+      btn.style.color = hoverColor;
+      btn.style.borderColor = hoverColor;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.color = '#e2e8f0';
+      btn.style.borderColor = '#475569';
+    });
+  }
+  addActionHover('start-button',  '#2563eb');
+  addActionHover('clear-button',  '#dc2626');
+  addActionHover('download-all',  '#10b981');
 });
 
 function findMetaLine(queueItemEl) {
