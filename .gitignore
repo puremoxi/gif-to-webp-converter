@@ -1,3 +1,6 @@
 # Local dev certs
 *.pem
 *.key
+
+# Desktop build output
+dist/

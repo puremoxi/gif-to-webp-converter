@@ -1,0 +1,10 @@
+{
+  "assets": [
+    "index.html",
+    "version.json",
+    "src/**/*",
+    "vendor/**/*"
+  ],
+  "targets": ["node20-win-x64"],
+  "outputPath": "dist"
+}
