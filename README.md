@@ -3,29 +3,74 @@
 A self-contained browser-based image converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
 
+---
+
+## Contents
+
+- [About This Application](#about)
+  - [What is WebP?](#what-is-webp)
+  - [What is AVIF?](#what-is-avif)
+  - [What is FFmpeg?](#what-is-ffmpeg)
+- [Usage](#usage)
+  - [Quick Start — Option 01 (Windows / PowerShell)](#quick-start-option-01)
+- [Features v4.2](#features)
+- [How It Works v4.2](#how-it-works)
+- [ChangeLog v4.2](#changelog)
+- [Developer Reference](#developer-reference)
+  - [Quick Start — Option 02 (WSL Development + Windows Everyday Launcher)](#quick-start-option-02)
+  - [Project Hierarchy](#project-hierarchy)
+  - [Project Structure](#project-structure)
+    - [Core Application Files (`src/`)](#core-application-files)
+    - [Core Logic Modules (`src/modules/`)](#core-logic-modules)
+    - [Server & Configuration](#server-and-configuration)
+    - [Styling & Vendor Files](#styling-and-vendor-files)
+  - [Additional Details](#additional-details)
+    - [Tip: FFmpeg Load Progress](#ffmpeg-load-progress)
+    - [Troubleshooting](#troubleshooting)
+    - [Self-hosted JSZip (CSP-safe)](#self-hosted-jszip)
+    - [UI Extensions Module](#ui-extensions-module)
+    - [CSP Notes](#csp-notes)
+  - [Build From Scratch (Windows / PowerShell)](#build-from-scratch)
+  - [Validation](#validation)
+- [License](#license)
+
+---
+
+<a id="about"></a>
+
 ## About This Application
+
+<a id="what-is-webp"></a>
 
 ### What is WebP?
 
 WebP is a modern image format developed by Google that supports both lossy and lossless compression, as well as animation. It is designed to create smaller, richer images that make the web faster, offering significantly better compression than either GIF or PNG.
 
-* **For more information:** [https://en.wikipedia.org/wiki/WebP](https://en.wikipedia.org/wiki/WebP)
+- **For more information:** [https://en.wikipedia.org/wiki/WebP](https://en.wikipedia.org/wiki/WebP)
+
+<a id="what-is-avif"></a>
 
 ### What is AVIF?
 
 AVIF is a modern image format based on the AV1 codec. It is often very efficient for still images and is now available as an output option in Shrink Ray.
 
-* **For more information:** [https://en.wikipedia.org/wiki/AVIF](https://en.wikipedia.org/wiki/AVIF)
+- **For more information:** [https://en.wikipedia.org/wiki/AVIF](https://en.wikipedia.org/wiki/AVIF)
+
+<a id="what-is-ffmpeg"></a>
 
 ### What is FFmpeg?
 
 FFmpeg is a powerful, free, and open-source software project capable of handling virtually any multimedia format. This application uses a WebAssembly (WASM) version of FFmpeg, which allows it to run complex video and image processing tasks directly in your browser.
 
-* **For more information:** [https://en.wikipedia.org/wiki/FFmpeg](https://en.wikipedia.org/wiki/FFmpeg)
+- **For more information:** [https://en.wikipedia.org/wiki/FFmpeg](https://en.wikipedia.org/wiki/FFmpeg)
 
 ---
 
+<a id="usage"></a>
+
 ## 🚀 Usage
+
+<a id="quick-start-option-01"></a>
 
 ## Quick Start - Option 01 (Windows / PowerShell)
 
@@ -53,145 +98,7 @@ http://localhost:3000
 
 ---
 
-## Quick Start - Option 02 (WSL Development + Windows Everyday Launcher)
-
-Use this option only when you are actively developing the tool in WSL/Ubuntu and also want to launch it from Windows as an everyday tool.
-
-This workflow keeps one source of truth for development:
-
-```text
-WSL / Ubuntu development repo:
-/home/rmcdougal/projects/gif-to-webp-converter
-
-Windows launcher location:
-C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
-```
-
-The Windows `.bat` file is only a launcher. It does not duplicate the source repo. It calls a small WSL runner script, which loads `nvm`, switches into the project folder, and runs `npm run serve`.
-
-### 1. Confirm the WSL project runs with the correct Node/npm
-
-From WSL/Ubuntu:
-
-```bash
-cd ~/projects/gif-to-webp-converter
-which node
-which npm
-node -v
-npm -v
-```
-
-Expected result should point to the WSL `nvm` install, similar to:
-
-```text
-/home/rmcdougal/.nvm/versions/node/v24.13.0/bin/node
-/home/rmcdougal/.nvm/versions/node/v24.13.0/bin/npm
-v24.13.0
-11.6.2
-```
-
-### 2. Create the WSL runner script
-
-From WSL/Ubuntu:
-
-```bash
-mkdir -p ~/bin
-
-cat > ~/bin/run-gif-to-webp-converter <<'EOF'
-#!/usr/bin/env bash
-
-export NVM_DIR="$HOME/.nvm"
-
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-  . "$NVM_DIR/nvm.sh"
-else
-  echo "ERROR: nvm not found at $NVM_DIR/nvm.sh"
-  exit 1
-fi
-
-cd "$HOME/projects/gif-to-webp-converter" || exit 1
-
-echo "Using node: $(which node)"
-echo "Using npm:  $(which npm)"
-echo "Node version: $(node -v)"
-echo "npm version:  $(npm -v)"
-echo
-
-npm run serve
-EOF
-
-chmod +x ~/bin/run-gif-to-webp-converter
-```
-
-### 3. Test the WSL runner directly
-
-From WSL/Ubuntu:
-
-```bash
-~/bin/run-gif-to-webp-converter
-```
-
-The server should start and print the local URL. Open the app in Windows at:
-
-```text
-http://localhost:3000
-```
-
-Stop the server with:
-
-```text
-Ctrl+C
-```
-
-### 4. Create the Windows launcher folder
-
-From WSL/Ubuntu:
-
-```bash
-mkdir -p /mnt/c/Users/ryanm/tools/launchers
-```
-
-### 5. Create the Windows `.bat` launcher
-
-From WSL/Ubuntu:
-
-```bash
-WINTOOLS="/mnt/c/Users/ryanm/tools"
-
-cat > "$WINTOOLS/launchers/gif-to-webp-converter.bat" <<'EOF'
-@echo off
-wsl.exe -d Ubuntu-22.04 -- bash --noprofile --norc /home/rmcdougal/bin/run-gif-to-webp-converter
-pause
-EOF
-```
-
-### 6. Launch from Windows
-
-From Windows PowerShell:
-
-```powershell
-C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
-```
-
-Then open:
-
-```text
-http://localhost:3000
-```
-
-### Why this option exists
-
-This avoids maintaining two active copies of the same repo. The recommended model is:
-
-```text
-WSL / Ubuntu repo = development source of truth
-Windows tools folder = launcher and everyday access point
-GitHub = remote backup and version history
-```
-
-If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm that the runner script prints WSL `nvm` paths for both `node` and `npm`.
-
----
+<a id="features"></a>
 
 ## 🆕 Features --> v4.2
 
@@ -241,6 +148,8 @@ If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm
 
 ---
 
+<a id="how-it-works"></a>
+
 ## 🆕 How it works --> v4.2
 
 **1. Open the app in a browser at [http://localhost:3000](http://localhost:3000).**
@@ -281,7 +190,21 @@ When each file finishes, its card updates to **Converted** (in green), shows the
 
 ![Shrink Ray — conversion complete](./images/Shrink_Ray_UI_E_v001.png)
 
+**5a. Download ALL — grab every converted file at once as a zip.**
+
+Once all items in the Queue are **Converted**, the **Download ALL** button activates (highlighted below). Clicking it packages every converted file into a single timestamped `.zip` and triggers one download — no need to save files one by one.
+
+![Shrink Ray — Download ALL button active](./images/Shrink_Ray_UI_E5a_v001.png)
+
+**5b. Per-file download and clipboard copy — save or copy individual files.**
+
+Each converted card shows two action icons beneath its progress bar. The **download icon** (green outline) saves that single file to your computer with a timestamped filename. The **clipboard icon** (purple outline) copies the converted image directly to your clipboard so you can paste it anywhere without saving to disk first.
+
+![Shrink Ray — per-file download and copy buttons](./images/Shrink_Ray_UI_E5b_v001.png)
+
 ---
+
+<a id="changelog"></a>
 
 ## 🆕 ChangeLog --> v4.2
 
@@ -330,22 +253,172 @@ When each file finishes, its card updates to **Converted** (in green), shows the
 
 **Feature Enhancements**  
 - Added ability to **remove individual files** from the processing queue before conversion:  
-  - Each queued item now includes a **“Remove”** link.  
-  - Clicking “Remove” instantly hides the item from the UI and excludes it from processing.  
-  - All “Remove” links automatically hide when conversion begins.  
+  - Each queued item now includes a **"Remove"** link.  
+  - Clicking "Remove" instantly hides the item from the UI and excludes it from processing.  
+  - All "Remove" links automatically hide when conversion begins.  
 - **Per-file download improvements:**  
   - Each converted download filename now appends a timestamp in `_MMDDYYYY_HHMM` format (e.g. `clip_v001_11112025_0655.webp`).  
 - **Batch download improvements:**  
-  - “Download ALL” zip files now include a timestamped suffix in the same format  
+  - "Download ALL" zip files now include a timestamped suffix in the same format  
     (e.g. `converted_webp_files_11112025_064025.zip`).  
 - **Header and layout refinements:**  
-  - “Settings” and “Queue” headers are now centered.  
-  - Clear Queue also clears any displayed “Files converted in …” aggregate timing message.  
-- Internal updates to `ui-extensions.js` and `app.js` to support placement consistency between “Remove” and “Download”, and improve dynamic filename updates.
-
+  - "Settings" and "Queue" headers are now centered.  
+  - Clear Queue also clears any displayed "Files converted in …" aggregate timing message.  
+- Internal updates to `ui-extensions.js` and `app.js` to support placement consistency between "Remove" and "Download", and improve dynamic filename updates.
 
 ---
-## 📂 Project Hierarchy
+
+<a id="developer-reference"></a>
+
+## 👨‍💻 Developer Reference
+
+---
+
+<a id="quick-start-option-02"></a>
+
+### Quick Start - Option 02 (WSL Development + Windows Everyday Launcher)
+
+Use this option only when you are actively developing the tool in WSL/Ubuntu and also want to launch it from Windows as an everyday tool.
+
+This workflow keeps one source of truth for development:
+
+```text
+WSL / Ubuntu development repo:
+/home/rmcdougal/projects/gif-to-webp-converter
+
+Windows launcher location:
+C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
+```
+
+The Windows `.bat` file is only a launcher. It does not duplicate the source repo. It calls a small WSL runner script, which loads `nvm`, switches into the project folder, and runs `npm run serve`.
+
+#### 1. Confirm the WSL project runs with the correct Node/npm
+
+From WSL/Ubuntu:
+
+```bash
+cd ~/projects/gif-to-webp-converter
+which node
+which npm
+node -v
+npm -v
+```
+
+Expected result should point to the WSL `nvm` install, similar to:
+
+```text
+/home/rmcdougal/.nvm/versions/node/v24.13.0/bin/node
+/home/rmcdougal/.nvm/versions/node/v24.13.0/bin/npm
+v24.13.0
+11.6.2
+```
+
+#### 2. Create the WSL runner script
+
+From WSL/Ubuntu:
+
+```bash
+mkdir -p ~/bin
+
+cat > ~/bin/run-gif-to-webp-converter <<'EOF'
+#!/usr/bin/env bash
+
+export NVM_DIR="$HOME/.nvm"
+
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh"
+else
+  echo "ERROR: nvm not found at $NVM_DIR/nvm.sh"
+  exit 1
+fi
+
+cd "$HOME/projects/gif-to-webp-converter" || exit 1
+
+echo "Using node: $(which node)"
+echo "Using npm:  $(which npm)"
+echo "Node version: $(node -v)"
+echo "npm version:  $(npm -v)"
+echo
+
+npm run serve
+EOF
+
+chmod +x ~/bin/run-gif-to-webp-converter
+```
+
+#### 3. Test the WSL runner directly
+
+From WSL/Ubuntu:
+
+```bash
+~/bin/run-gif-to-webp-converter
+```
+
+The server should start and print the local URL. Open the app in Windows at:
+
+```text
+http://localhost:3000
+```
+
+Stop the server with:
+
+```text
+Ctrl+C
+```
+
+#### 4. Create the Windows launcher folder
+
+From WSL/Ubuntu:
+
+```bash
+mkdir -p /mnt/c/Users/ryanm/tools/launchers
+```
+
+#### 5. Create the Windows `.bat` launcher
+
+From WSL/Ubuntu:
+
+```bash
+WINTOOLS="/mnt/c/Users/ryanm/tools"
+
+cat > "$WINTOOLS/launchers/gif-to-webp-converter.bat" <<'EOF'
+@echo off
+wsl.exe -d Ubuntu-22.04 -- bash --noprofile --norc /home/rmcdougal/bin/run-gif-to-webp-converter
+pause
+EOF
+```
+
+#### 6. Launch from Windows
+
+From Windows PowerShell:
+
+```powershell
+C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+#### Why this option exists
+
+This avoids maintaining two active copies of the same repo. The recommended model is:
+
+```text
+WSL / Ubuntu repo = development source of truth
+Windows tools folder = launcher and everyday access point
+GitHub = remote backup and version history
+```
+
+If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm that the runner script prints WSL `nvm` paths for both `node` and `npm`.
+
+---
+
+<a id="project-hierarchy"></a>
+
+### 📂 Project Hierarchy
 
 ```text
 gif-to-webp-converter/
@@ -393,104 +466,129 @@ gif-to-webp-converter/
 |   ├─ autoprefixer/
 |   └─ ... (many dependencies)
 |   
-└─ images/                # Screencaps for README.mdc
-   ├─ GIF_WebP_Converter_UI_A_v001.png
-   ├─ GIF_WebP_Converter_UI_B_v001.png
-   ├─ GIF_WebP_Converter_UI_C_v001.png
-   ├─ GIF_WebP_Converter_UI_D_v001.png
-   ├─ GIF_WebP_Converter_UI_E_v001.png
-   └─ GIF_WebP_Converter_Validation_A_v001.png
+└─ images/                # Screencaps for README.md
+   ├─ Shrink_Ray_UI_A_v001.png
+   ├─ Shrink_Ray_UI_B_v001.png
+   ├─ Shrink_Ray_UI_C_v001.png
+   ├─ Shrink_Ray_UI_D_v001.png
+   ├─ Shrink_Ray_UI_E_v001.png
+   ├─ Shrink_Ray_UI_E5a_v001.png
+   └─ Shrink_Ray_UI_E5b_v001.png
 ```
 
 ---
-## Project Structure
+
+<a id="project-structure"></a>
+
+### Project Structure
 
 Here is a breakdown of what each file and folder does in this application.
 
-### Core Application Files (`src/`)
+<a id="core-application-files"></a>
+
+#### Core Application Files (`src/`)
 
 This directory contains all the JavaScript code that makes your application work.
 
-* `src/app.js`: This is the **main controller** of the entire application. It's responsible for:
-    * Loading FFmpeg.
-    * Setting up all the main event listeners (drag-and-drop, file input, Start, Clear, Download All).
-    * Initializing the conversion queue from `queueManager.js`.
-    * Grabbing the user's settings (like output format, quality, output folder, loop, etc.) from the UI.
-    * Telling the queue to start when the "Start Conversion" button is clicked.
-* `src/boot.js`: This is a tiny helper script. Its only job is to load the main `app.js` file as a "module" (`<script type="module">`). This is required to use modern `import` and `export` features.
+- `src/app.js`: This is the **main controller** of the entire application. It's responsible for:
+    - Loading FFmpeg.
+    - Setting up all the main event listeners (drag-and-drop, file input, Start, Clear, Download All).
+    - Initializing the conversion queue from `queueManager.js`.
+    - Grabbing the user's settings (like output format, quality, output folder, loop, etc.) from the UI.
+    - Telling the queue to start when the "Start Conversion" button is clicked.
+- `src/boot.js`: This is a tiny helper script. Its only job is to load the main `app.js` file as a "module" (`<script type="module">`). This is required to use modern `import` and `export` features.
 
-### Core Logic Modules (`src/modules/`)
+<a id="core-logic-modules"></a>
+
+#### Core Logic Modules (`src/modules/`)
 
 These files break the application's logic into clean, reusable pieces.
 
-* `src/modules/ffmpegClient.js`: This is the **WebP conversion engine**. It talks to the stable FFmpeg WebAssembly core in `/vendor/ffmpeg/`.
-    * `initFFmpeg`: Loads the WebP FFmpeg WebAssembly core.
-    * `convertToWebP`: Takes a source image and your settings, runs the WebP `ffmpeg` command, and reports progress.
-* `src/modules/avifClient.js`: This is the **AVIF conversion engine**. It uses the isolated `@jsquash/avif` WASM encoder vendored in `/vendor/jsquash-avif/`.
-    * `hasAvifEngineFiles`: Checks whether the AVIF WASM engine files are present before enabling AVIF in the File Format dropdown.
-    * `convertToAvif`: Converts still images, and the first frame of animated inputs, to AVIF. Target File Size uses the same quality binary-search pattern as WebP.
-    * AVIF encoding runs in `src/modules/avifWorker.js` so slower AVIF compression does not block the browser UI thread.
-* `src/modules/ui.js`: This file is responsible for **all changes to the web page**. It doesn't know *how* to convert a file, but it knows how to *show* the process.
-    * It creates the file items in the queue when you drop them.
-    * It updates the progress bar (`updateItemProgress`).
-    * It changes the status from "Queued" to "Processing" to "Converted".
-    * It creates the "Download" link for a finished file (`setItemConverted`).
-    * It shows error messages (`setItemError`).
-    * It controls the pop-up banner that appears while FFmpeg is first loading.
-* `src/modules/queueManager.js`: This file manages the **list of files** to be converted.
-    * It lets you add files to the queue.
-    * Its `run` function starts all the conversion tasks in parallel.
-    * Its `clear` function removes all files from the UI.
-* `src/modules/gifInfo.js`: This is a utility that **reads GIF metadata**. It quickly reads the file to get information like frame count and framerate (FPS) *without* needing to use the heavy FFmpeg library. This is why you see that info instantly when you add a file.
-* `src/ui-extensions.js`: This module handles collapsible sections, diagnostics interactions, info popups, file-size summaries, remove links, download filename updates, and batch timing.
-* `src/modules/perFrameMixer.js`: Experimental/auxiliary logic retained in the repo but not part of the main conversion path.
+- `src/modules/ffmpegClient.js`: This is the **WebP conversion engine**. It talks to the stable FFmpeg WebAssembly core in `/vendor/ffmpeg/`.
+    - `initFFmpeg`: Loads the WebP FFmpeg WebAssembly core.
+    - `convertToWebP`: Takes a source image and your settings, runs the WebP `ffmpeg` command, and reports progress.
+- `src/modules/avifClient.js`: This is the **AVIF conversion engine**. It uses the isolated `@jsquash/avif` WASM encoder vendored in `/vendor/jsquash-avif/`.
+    - `hasAvifEngineFiles`: Checks whether the AVIF WASM engine files are present before enabling AVIF in the File Format dropdown.
+    - `convertToAvif`: Converts still images, and the first frame of animated inputs, to AVIF. Target File Size uses the same quality binary-search pattern as WebP.
+    - AVIF encoding runs in `src/modules/avifWorker.js` so slower AVIF compression does not block the browser UI thread.
+- `src/modules/ui.js`: This file is responsible for **all changes to the web page**. It doesn't know *how* to convert a file, but it knows how to *show* the process.
+    - It creates the file items in the queue when you drop them.
+    - It updates the progress bar (`updateItemProgress`).
+    - It changes the status from "Queued" to "Processing" to "Converted".
+    - It creates the "Download" link for a finished file (`setItemConverted`).
+    - It shows error messages (`setItemError`).
+    - It controls the pop-up banner that appears while FFmpeg is first loading.
+- `src/modules/queueManager.js`: This file manages the **list of files** to be converted.
+    - It lets you add files to the queue.
+    - Its `run` function starts all the conversion tasks in parallel.
+    - Its `clear` function removes all files from the UI.
+- `src/modules/gifInfo.js`: This is a utility that **reads GIF metadata**. It quickly reads the file to get information like frame count and framerate (FPS) *without* needing to use the heavy FFmpeg library. This is why you see that info instantly when you add a file.
+- `src/ui-extensions.js`: This module handles collapsible sections, diagnostics interactions, info popups, file-size summaries, remove links, download filename updates, and batch timing.
+- `src/modules/perFrameMixer.js`: Experimental/auxiliary logic retained in the repo but not part of the main conversion path.
 
-### Server & Configuration
+<a id="server-and-configuration"></a>
 
-* `server.cjs`: This is your **local web server** (run via `npm run serve`). Its job is to:
+#### Server & Configuration
+
+- `server.cjs`: This is your **local web server** (run via `npm run serve`). Its job is to:
     1.  Serve your `index.html` file.
     2.  Serve all your other assets (JavaScript, CSS, and the FFmpeg files).
     3.  Set the special `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` security headers. These are **required** by browsers to enable `SharedArrayBuffer`, which FFmpeg.js needs for performance.
-* `package.json`: This is the project's **manifest**. It lists your project's dependencies (like Tailwind CSS) and defines your `npm` scripts (`serve`, `build:css`).
-* `index.html`: The **single HTML page** for the entire application. It contains the HTML structure for the dropzone, buttons, Settings panel, Diagnostics panel, Queue, and results list.
+- `package.json`: This is the project's **manifest**. It lists your project's dependencies (like Tailwind CSS) and defines your `npm` scripts (`serve`, `build:css`).
+- `index.html`: The **single HTML page** for the entire application. It contains the HTML structure for the dropzone, buttons, Settings panel, Diagnostics panel, Queue, and results list.
 
-### Styling & Vendor Files
+<a id="styling-and-vendor-files"></a>
 
-* `styles/input.css`: This is your **source CSS file**. You write your Tailwind directives here (like `@tailwind base;`).
-* `vendor/css/tailwind.css`: This is the **output CSS file** that is actually loaded by `index.html`. It is the generated result of running `npm run build:css`.
-* `tailwind.config.js`: The **configuration file for Tailwind CSS**.
-* `postcss.config.js`: The configuration file for PostCSS, the tool that runs Tailwind.
-* `vendor/ffmpeg/`: This folder contains the **stable WebP FFmpeg.js core** and shared FFmpeg UMD loader used by the app.
-* `vendor/jsquash-avif/`: This folder contains the isolated **AVIF WASM encoder** from `@jsquash/avif`.
-* `vendor/jszip/`: This folder contains the **JSZip library**, which is used by the "Download All" button to create a `.zip` file in your browser.
+#### Styling & Vendor Files
+
+- `styles/input.css`: This is your **source CSS file**. You write your Tailwind directives here (like `@tailwind base;`).
+- `vendor/css/tailwind.css`: This is the **output CSS file** that is actually loaded by `index.html`. It is the generated result of running `npm run build:css`.
+- `tailwind.config.js`: The **configuration file for Tailwind CSS**.
+- `postcss.config.js`: The configuration file for PostCSS, the tool that runs Tailwind.
+- `vendor/ffmpeg/`: This folder contains the **stable WebP FFmpeg.js core** and shared FFmpeg UMD loader used by the app.
+- `vendor/jsquash-avif/`: This folder contains the isolated **AVIF WASM encoder** from `@jsquash/avif`.
+- `vendor/jszip/`: This folder contains the **JSZip library**, which is used by the "Download All" button to create a `.zip` file in your browser.
 
 ---
-## 🧩 Additional Details
 
-### Tip: FFmpeg load progress
+<a id="additional-details"></a>
+
+### 🧩 Additional Details
+
+<a id="ffmpeg-load-progress"></a>
+
+#### Tip: FFmpeg load progress
 The top banner shows `ffmpeg-core.js`, `ffmpeg-core.wasm`, and `ffmpeg-core.worker.js` with a linear progress bar and a `n/3 complete` counter.
 
-### Troubleshooting
+<a id="troubleshooting"></a>
+
+#### Troubleshooting
 - If WebP FFmpeg fails to load: ensure `vendor/ffmpeg/` contains valid MT UMD chunks.
 - If AVIF is unavailable: ensure `vendor/jsquash-avif/codec/enc/avif_enc.js` and `vendor/jsquash-avif/codec/enc/avif_enc.wasm` are present.
 - If downloads fail: ensure JSZip is accessible from `vendor/jszip/`.
 - For performance testing, use Chrome or Edge with multi-thread WebAssembly enabled.
 
-### Self-hosted JSZip (CSP-safe)
+<a id="self-hosted-jszip"></a>
+
+#### Self-hosted JSZip (CSP-safe)
 This app uses `script-src 'self' 'wasm-unsafe-eval'`. Do **not** import JSZip from a CDN. Use the Quick Start steps above. The ESM wrapper is `/vendor/jszip.mjs` (already included).
 
-### UI Extensions Module
+<a id="ui-extensions-module"></a>
+
+#### UI Extensions Module
 
 `src/ui-extensions.js` encapsulates browser-side enhancements for the tool:
 
 - **Resolution detection:** Determines GIF dimensions using object URLs.
 - **File size management:** Displays GIF and WebP sizes, calculates percent reduction.
-- **Collapsible sections:** Toggles the “Settings”, “Diagnostics”, and “Queue” UI.
+- **Collapsible sections:** Toggles the "Settings", "Diagnostics", and "Queue" UI.
 - **Timing utilities:** Tracks and displays aggregate batch conversion time.
 
 Exposed via `window.UIExt` for internal use in `app.js`.
 
-### CSP Notes
+<a id="csp-notes"></a>
+
+#### CSP Notes
 
 - No inline scripts or `eval()` calls are used.
 - All JS modules are imported via `<script type="module">`.
@@ -498,7 +596,9 @@ Exposed via `window.UIExt` for internal use in `app.js`.
 
 ---
 
-## "Build From Scratch" (Windows / PowerShell)
+<a id="build-from-scratch"></a>
+
+### "Build From Scratch" (Windows / PowerShell)
 **(do at your own risk)**<br>
 
 Although the repository has all of the files needed to run properly using Google Chrome in Windows, if you want are looking to use this application in other browsers or on other OS's , I wanted to share how you can rebuild key components of the relied upon structure in the manner below (only showing windows OS currently). The localization of these elements reflect the desire of the tool to operate within a limited environment. There is a world where the tool could dynamically load or make calls to these services but that is not the intention of this tool. 
@@ -541,7 +641,10 @@ npm run serve
 ```
 
 ---
-## Validation (what to expect)
+
+<a id="validation"></a>
+
+### Validation (what to expect)
 
 This is a limited diagnostic tool that confirms:
 1. the existence of necessary files per the aforementioned "build from scratch"
@@ -550,6 +653,9 @@ This is a limited diagnostic tool that confirms:
 ![image info](./images/GIF_WebP_Converter_Validation_A_v001.png)
 
 ---
+
+<a id="license"></a>
+
 ## 🧾 License
 
 MIT License. Use freely for both personal and commercial projects.
