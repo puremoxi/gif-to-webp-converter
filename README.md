@@ -243,25 +243,43 @@ If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm
 
 ## 🆕 How it works --> v4.2
 
-1. Open http://localhost:3000 in a browser.
+**1. Open the app in a browser at [http://localhost:3000](http://localhost:3000).**
 
-![image info](./images/GIF_WebP_Converter_UI_A_v001.png)
+The Shrink Ray interface loads with a Drag & Drop zone and collapsed Settings, Diagnostics, and Queue panels ready to use.
+
+![Shrink Ray — empty state](./images/Shrink_Ray_UI_A_v001.png)
+
 ---
-2. Drag and Drop GIF, PNG, or JPG/JPEG files in DROP AREA. (or click on drop area and search for files you want to convert)
 
-![image info](./images/GIF_WebP_Converter_UI_B_v001.png)
+**2. Drop your files onto the drop zone (or click to browse).**
+
+Drag GIF, PNG, or JPG/JPEG files directly onto the drop zone. Each file is added to the Queue as a card showing its filename, file size, resolution, frame count, FPS, and whether it is an animation or still image. A **Remove** link lets you pull individual files before conversion starts.
+
+![Shrink Ray — files added to queue](./images/Shrink_Ray_UI_B_v001.png)
+
 ---
-3. Make changes to how you would like to process/convert your images in the Settings section by clicking on the bar titled "Settings" and expanding to see the options. (NOTE: the defaults work well 90% of the time.)
 
-![image info](./images/GIF_WebP_Converter_UI_C_v001.png)
+**3. (Optional) Expand Settings to adjust conversion options.**
+
+Click the **Settings** bar to reveal all conversion controls: output folder, output format (WebP or AVIF), quality, compression level, animation/still-image mode, lossless compression, dimension constraints, and target file size. The defaults work well in most cases — this step is only needed when you want to fine-tune the output.
+
+![Shrink Ray — Settings panel open](./images/Shrink_Ray_UI_C_v001.png)
+
 ---
-4. Press "Start Conversion" button to begin processing your images/animated gifs.
 
-![image info](./images/GIF_WebP_Converter_UI_D_v001.png)
+**4. Click "Start Conversion" to begin processing.**
+
+All files in the Queue are converted in parallel. Each card shows a live progress bar and percentage while its file is being processed.
+
+![Shrink Ray — conversion in progress](./images/Shrink_Ray_UI_D_v001.png)
+
 ---
-5. When an item is completed in the queue, a "Download" link will appear underneath the thumbnail. When all items in the queue are complete, the "Download All" button will activate. You can download your converted files either way.
 
-![image info](./images/GIF_WebP_Converter_UI_E_v001.png)
+**5. Download your converted files.**
+
+When each file finishes, its card updates to **Converted** (in green), shows the output file size and percent reduction, and displays a download icon to save that file. Once all files are done, a batch timing message appears and the **Download ALL** button activates so you can grab every converted file as a single zip.
+
+![Shrink Ray — conversion complete](./images/Shrink_Ray_UI_E_v001.png)
 
 ---
 
