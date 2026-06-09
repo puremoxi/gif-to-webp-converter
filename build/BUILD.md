@@ -81,7 +81,28 @@ The first run downloads the pkg Node 20 base binary (~20 MB, cached for future b
 
 ---
 
-## Step 5 — Test the compiled .exe
+## Step 5 — (Optional) Set the Explorer icon on Windows
+
+The pkg binary ships with the default Node.js green-cube icon. To replace it with
+the Shrink Ray icon, run `rcedit` on Windows — it is the only tool that safely
+patches pkg/Electron PE binaries without corrupting them.
+
+1. Download `rcedit-x64.exe` from [github.com/electron/rcedit/releases](https://github.com/electron/rcedit/releases)
+2. Copy `build/icon.ico` from WSL to the same folder as `ShrinkRay.exe`
+3. In PowerShell:
+
+   ```powershell
+   .\rcedit-x64.exe ShrinkRay.exe --set-icon icon.ico
+   ```
+
+4. Refresh Explorer (`F5`) — the ray gun icon appears.
+
+> This is a post-build step that only needs to run once per release.
+> The app functions identically whether or not the icon is set.
+
+---
+
+## Step 6 — Test the compiled .exe
 
 ```powershell
 # In Windows PowerShell or by double-clicking in Explorer

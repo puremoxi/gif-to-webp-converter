@@ -2,6 +2,7 @@
   "assets": [
     "index.html",
     "version.json",
+    "icons/**/*",
     "src/**/*",
     "vendor/**/*"
   ],

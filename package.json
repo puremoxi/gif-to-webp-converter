@@ -1,10 +1,11 @@
 {
   "name": "gif-to-webp-converter",
-  "version": "4.2.0",
+  "version": "5.0.0",
   "private": true,
   "main": "launcher.cjs",
   "type": "commonjs",
   "scripts": {
+    "postinstall": "node build/postinstall.cjs",
     "// ------------------------": "ASSET BUILD (UNCHANGED)",
     "serve": "node server.cjs",
     "serve:fast": "node server.cjs",
@@ -16,7 +17,8 @@
     "validate:quiet:strict": "node -e \"process.env.QUIET='1'; process.env.STRICT='1'; require('./validateManifest.cjs').validate()\"",
     "build:css": "tailwindcss -i styles/input.css -o vendor/css/tailwind.css --minify",
     "// ------------------------- ": "DESKTOP BUILD",
-    "build:exe": "pkg launcher.cjs --targets node20-win-x64 --output dist/ShrinkRay.exe --config pkg.config.json",
+    "build:exe": "pkg launcher.cjs --targets node20-win-x64 --output dist/ShrinkRay.exe --config pkg.config.json && node build/set-icon.cjs",
+    "build:icon": "node -e \"const sharp=require('sharp'),toIco=require('to-ico'),fs=require('fs');(async()=>{const m=await sharp('build/icon-source_v002.png').metadata(),s=Math.min(m.width,m.height),l=Math.floor((m.width-s)/2),t=Math.floor((m.height-s)/2),p=await Promise.all([256,48,32,16].map(n=>sharp('build/icon-source_v002.png').extract({left:l,top:t,width:s,height:s}).resize(n,n).png().toBuffer()));fs.writeFileSync('build/icon.ico',await toIco(p));console.log('icon.ico written')})()\"",
     "build:exe:test": "node launcher.cjs"
   },
   "pkg": {
@@ -33,9 +35,14 @@
     "outputPath": "dist"
   },
   "devDependencies": {
+    "@electron/asar": "^4.2.0",
     "@yao-pkg/pkg": "^5.12.0",
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.18"
+    "rcedit": "^5.0.2",
+    "resedit": "^3.0.2",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^3.4.18",
+    "to-ico": "^1.1.5"
   }
 }

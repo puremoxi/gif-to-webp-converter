@@ -12,7 +12,7 @@
 ; ============================================================
 
 #define AppName      "Shrink Ray"
-#define AppVersion   "4.2.0"
+#define AppVersion   "5.0.0"
 #define AppPublisher "Shrink Ray"
 #define AppExe       "ShrinkRay.exe"
 #define AppURL       "https://github.com/puremoxi/gif-to-webp-converter"

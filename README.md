@@ -1,4 +1,4 @@
-# Shrink Ray --> v4.2 (Multi-Format, Multi-Thread, CSP-Compliant)
+# Shrink Ray --> v5.0 (Multi-Format, Multi-Thread, CSP-Compliant)
 
 A self-contained browser-based image converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
@@ -13,9 +13,9 @@ All processing is performed locally — no files are uploaded.
   - [What is FFmpeg?](#what-is-ffmpeg)
 - [Usage](#usage)
   - [Quick Start — Option 01 (Windows / PowerShell)](#quick-start-option-01)
-- [Features v4.2](#features)
-- [How It Works v4.2](#how-it-works)
-- [ChangeLog v4.2](#changelog)
+- [Features v5.0](#features)
+- [How It Works v5.0](#how-it-works)
+- [ChangeLog v5.0](#changelog)
 - [Developer Reference](#developer-reference)
   - [Quick Start — Option 02 (WSL Development + Windows Everyday Launcher)](#quick-start-option-02)
   - [Project Hierarchy](#project-hierarchy)
@@ -30,6 +30,7 @@ All processing is performed locally — no files are uploaded.
     - [Self-hosted JSZip (CSP-safe)](#self-hosted-jszip)
     - [UI Extensions Module](#ui-extensions-module)
     - [CSP Notes](#csp-notes)
+  - [Desktop Executable — Explorer Icon Limitation](#desktop-executable--explorer-icon-limitation)
   - [Build From Scratch (Windows / PowerShell)](#build-from-scratch)
   - [Validation](#validation)
 - [License](#license)
@@ -100,7 +101,7 @@ http://localhost:3000
 
 <a id="features"></a>
 
-## 🆕 Features --> v4.2
+## 🆕 Features --> v5.0
 
 - Basic Features
   - Converts GIF, PNG, and JPG/JPEG files to WebP or AVIF.
@@ -145,12 +146,18 @@ http://localhost:3000
   - Diagnostics, Queue, Settings, and action button colors were refined for a quieter slate UI.
   - Queue progress, file names, and status use the Shrink Ray header color.
   - Dropzone and header helper popups were simplified and restyled.
+- Desktop Executable (v5.0)
+  - Self-contained Windows `.exe` built with `@yao-pkg/pkg` — no Node.js required on the user's machine.
+  - All assets (HTML, JS, WASM, CSS) embedded directly in the binary.
+  - Opens the default browser automatically on launch and binds to `127.0.0.1` only.
+  - Shrink Ray icon displayed in the browser UI header above the app name.
+  - Inno Setup installer script included for optional packaged distribution.
 
 ---
 
 <a id="how-it-works"></a>
 
-## 🆕 How it works --> v4.2
+## 🆕 How it works --> v5.0
 
 **1. Open the app in a browser at [http://localhost:3000](http://localhost:3000).**
 
@@ -206,9 +213,21 @@ Each converted card shows two action icons beneath its progress bar. The **downl
 
 <a id="changelog"></a>
 
-## 🆕 ChangeLog --> v4.2
+## 🆕 ChangeLog --> v5.0
 
-**Changes Since the February 16 Update**  
+### Changes in v5.0 (June 2026)
+
+- Added self-contained Windows desktop executable (`ShrinkRay.exe`) built with `@yao-pkg/pkg`.
+- All app assets (HTML, JS, WASM, CSS) are embedded in the binary — no Node.js required on the end-user machine.
+- Executable launches a local HTTP server on `127.0.0.1:3000` and opens the default browser automatically.
+- Added Shrink Ray icon to the browser UI header, centered above the app name.
+- Added `build/` directory with Inno Setup installer script, icon source, and desktop build documentation.
+- Added `pkg.config.json` for reliable asset embedding during the pkg build (the `pkg` key inside `package.json` is silently ignored by `@yao-pkg/pkg` when an explicit entry file is passed on the CLI).
+
+---
+
+### Changes Since the February 16 Update (v4.2)
+
 - Rebranded the browser UI from "Image → WebP Converter" / "PicPress" to **Shrink Ray**.
 - Added a privacy subhead: "No upload. Privacy first. Your files are processed locally and stay on your computer."
 - Added **AVIF output** alongside WebP.
@@ -248,10 +267,12 @@ Each converted card shows two action icons beneath its progress bar. The **downl
 - Reduced the header and dropzone info icons for a cleaner visual hierarchy.
 - Added selected-folder saving through the browser File System Access API when supported.
 
-**Browser Security Note**  
+#### Browser Security Note
+
 - A web page cannot silently discover or write to the original source file's folder from a standard file input or drag/drop. "Same As Source" remains the default UI intent, but actual custom-folder writing requires the user to choose **Select Folder** and grant browser permission.
 
-**Feature Enhancements**  
+#### Feature Enhancements
+
 - Added ability to **remove individual files** from the processing queue before conversion:  
   - Each queued item now includes a **"Remove"** link.  
   - Clicking "Remove" instantly hides the item from the UI and excludes it from processing.  
@@ -639,6 +660,36 @@ npm run validate
 npm run serve
 # open http://localhost:3000
 ```
+
+---
+
+### Desktop Executable — Explorer Icon Limitation
+
+The Windows `.exe` icon visible in Explorer, the taskbar, and the Start Menu is stored in the PE (Portable Executable) resource table — a section of the binary separate from the embedded app assets. Setting it correctly from Linux/WSL requires a tool that understands the exact binary layout `@yao-pkg/pkg` produces.
+
+#### Why the default icon appears (the green Node.js cube)
+
+pkg produces a modified PE binary. Generic PE editors (`resedit`, `ResourceHacker`) that work on ordinary executables corrupt the pkg binary when they attempt to patch the resource section — the app stops launching entirely. The only tool confirmed safe for pkg/Electron binaries is `rcedit.exe`, which is itself a Windows executable and therefore cannot run natively on Linux or WSL without Wine.
+
+#### Setting the icon on Windows (one-time, post-build step)
+
+1. Download `rcedit-x64.exe` from [github.com/electron/rcedit/releases](https://github.com/electron/rcedit/releases).
+2. Copy `build/icon.ico` from the WSL project to the same Windows folder as `ShrinkRay.exe`.
+3. In PowerShell:
+
+   ```powershell
+   .\rcedit-x64.exe ShrinkRay.exe --set-icon icon.ico
+   ```
+
+4. Press `F5` in Explorer — the Shrink Ray icon replaces the green cube.
+
+#### What is not affected
+
+The Explorer icon is purely cosmetic metadata. The application inside the binary — the embedded HTML, JS, WASM, CSS, and server — is untouched. The icon displayed inside the browser (centered above "Shrink Ray" in the UI header) comes from the embedded `icons/app-icon.png` asset and works correctly on all platforms without any additional steps.
+
+#### Future path
+
+If this project moves to an Electron wrapper, the icon is set at build time by Electron Forge or Electron Builder and requires no post-processing step. See the Electron desktop path notes in the project conversation history for context.
 
 ---
 
