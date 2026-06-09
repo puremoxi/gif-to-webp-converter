@@ -18,7 +18,7 @@
     "build:css": "tailwindcss -i styles/input.css -o vendor/css/tailwind.css --minify",
     "// ------------------------- ": "DESKTOP BUILD",
     "build:exe": "pkg launcher.cjs --targets node20-win-x64 --output dist/ShrinkRay.exe --config pkg.config.json && node build/set-icon.cjs",
-    "build:icon": "node -e \"const sharp=require('sharp'),toIco=require('to-ico'),fs=require('fs');(async()=>{const m=await sharp('build/icon-source_v002.png').metadata(),s=Math.min(m.width,m.height),l=Math.floor((m.width-s)/2),t=Math.floor((m.height-s)/2),p=await Promise.all([256,48,32,16].map(n=>sharp('build/icon-source_v002.png').extract({left:l,top:t,width:s,height:s}).resize(n,n).png().toBuffer()));fs.writeFileSync('build/icon.ico',await toIco(p));console.log('icon.ico written')})()\"",
+    "build:icon": "node -e \"const sharp=require('sharp'),toIco=require('to-ico'),fs=require('fs');(async()=>{const m=await sharp('build/icon-source_v003.png').metadata(),s=Math.min(m.width,m.height),l=Math.floor((m.width-s)/2),t=Math.floor((m.height-s)/2),p=await Promise.all([256,48,32,16].map(n=>sharp('build/icon-source_v003.png').extract({left:l,top:t,width:s,height:s}).resize(n,n).png().toBuffer()));fs.writeFileSync('build/icon.ico',await toIco(p));console.log('icon.ico written')})()\"",
     "build:exe:test": "node launcher.cjs"
   },
   "pkg": {
