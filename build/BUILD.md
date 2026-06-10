@@ -81,24 +81,65 @@ The first run downloads the pkg Node 20 base binary (~20 MB, cached for future b
 
 ---
 
-## Step 5 — (Optional) Set the Explorer icon on Windows
+## Step 5 — (One-time) Patch the base binary for the Explorer icon
 
-The pkg binary ships with the default Node.js green-cube icon. To replace it with
-the Shrink Ray icon, run `rcedit` on Windows — it is the only tool that safely
-patches pkg/Electron PE binaries without corrupting them.
+By default the output exe shows a generic Node.js green-cube icon. The fix is to
+patch the **pkg base binary once** — after that, every `npm run build:exe` produces
+an exe with the Shrink Ray icon automatically, with no per-release work.
 
-1. Download `rcedit-x64.exe` from [github.com/electron/rcedit/releases](https://github.com/electron/rcedit/releases)
-2. Copy `build/icon.ico` from WSL to the same folder as `ShrinkRay.exe`
-3. In PowerShell:
+### Option A — Automatic (WSL with Wine)
+
+If Wine is installed, `npm run build:exe` already handles this. To run it standalone:
+
+```bash
+node build/set-icon.cjs
+```
+
+Wine is installed automatically on `npm install`. If it wasn't, install it first:
+
+```bash
+sudo apt-get install -y wine
+```
+
+### Option B — Manual (Windows PowerShell, one-time)
+
+Run this once after your first build. You only need to repeat it if you clear the
+pkg cache (`~/.pkg-cache`) or change the Node target version.
+
+1. Download `rcedit-x64.exe` from
+   [github.com/electron/rcedit/releases](https://github.com/electron/rcedit/releases)
+
+2. In PowerShell:
 
    ```powershell
-   .\rcedit-x64.exe ShrinkRay.exe --set-icon icon.ico
+   mkdir C:\temp
+   copy "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\.pkg-cache\v3.5\fetched-v20.18.0-win-x64" C:\temp\
+   copy "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\projects\gif-to-webp-converter\build\icon.ico" C:\temp\
+   cd C:\temp
+   .\rcedit-x64.exe fetched-v20.18.0-win-x64 --set-icon icon.ico
+   copy C:\temp\fetched-v20.18.0-win-x64 "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\.pkg-cache\v3.5\fetched-v20.18.0-win-x64"
    ```
 
-4. Refresh Explorer (`F5`) — the ray gun icon appears.
+3. Back in WSL, rebuild:
 
-> This is a post-build step that only needs to run once per release.
-> The app functions identically whether or not the icon is set.
+   ```bash
+   npm run build:exe
+   ```
+
+   The output `dist/ShrinkRay.exe` will now show the Shrink Ray icon in Explorer
+   and on the Desktop — no further action needed.
+
+> **Why base binary, not the output exe?**
+> rcedit uses the Windows `EndUpdateResource` API, which can struggle with large
+> (76 MB) PE files — especially ones on OneDrive which holds a sync lock. The base
+> binary is ~41 MB, standard Node.js PE, and lives outside OneDrive. Patching it
+> once is both more reliable and permanent.
+>
+> **Why does rcedit fail on OneDrive?**
+> OneDrive holds a background file lock on synced files. `EndUpdateResource` tries
+> to rename the temp patched file over the original — the lock blocks it, causing
+> "Unable to commit changes". Moving files to `C:\temp\` (outside OneDrive) before
+> running rcedit avoids this entirely.
 
 ---
 
