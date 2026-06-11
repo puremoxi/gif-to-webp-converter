@@ -5,7 +5,7 @@ export function setupUI(dropzone, fileInput){
   const qualityLabel=document.getElementById('quality-label');
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
   const loss=document.getElementById('lossless-toggle'), mix=document.getElementById('mixed-toggle');
-  const loop=document.getElementById('loop-toggle'), still=document.getElementById('still-toggle');
+  const loop=document.getElementById('loop-toggle');
   const loopLabel=document.getElementById('loop-label'), mixedLabel=document.getElementById('mixed-label'), losslessLabel=document.getElementById('lossless-label');
   const resizeWidth=document.getElementById('resize-width');
   const ncd=document.getElementById('no-change-dimensions-toggle'), ncdLabel=document.getElementById('ncd-label');
@@ -51,6 +51,8 @@ export function setupUI(dropzone, fileInput){
   syncSliderAndValue(resizeHeight, resizeHeightVal);
   syncSliderAndValue(resizeWidth, resizeWidthVal);
   syncSliderAndValue(targetSizeKb, targetSizeVal);
+  syncSliderAndValue(document.getElementById('anim-max-fps'), document.getElementById('anim-max-fps-value'));
+  syncSliderAndValue(document.getElementById('anim-max-duration'), document.getElementById('anim-max-duration-value'));
 
   function syncOutputFolderMode() {
     if (!outputFolderMode || !outputFolderPicker) return;
@@ -125,12 +127,10 @@ export function setupUI(dropzone, fileInput){
     const mixLocked = mix.checked;
     if(mixLocked) loss.checked = false;
     lockEl(loss, losslessLabel, avifMode || mixLocked);
-    const stillLocked = still.checked;
-    if(stillLocked) loop.checked = false;
-    lockEl(loop, loopLabel, avifMode || stillLocked);
+    lockEl(loop, loopLabel, avifMode);
     syncQuality();
   }
-  loss.addEventListener('change',sync); mix.addEventListener('change',sync); still.addEventListener('change',sync); loop.addEventListener('change',sync); outputFormat?.addEventListener('change', sync); sync();
+  loss.addEventListener('change',sync); mix.addEventListener('change',sync); loop.addEventListener('change',sync); outputFormat?.addEventListener('change', sync); sync();
   ncd?.addEventListener('change', syncNCD); syncNCD();
   maxWidthToggle?.addEventListener('change', syncMaxWidth); syncMaxWidth();
   maxHeightToggle?.addEventListener('change', syncMaxHeight); syncMaxHeight();
@@ -231,7 +231,16 @@ export function setPlaceholderThumbnail(id){
   const c=document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d'); ctx.fillStyle='#1f2937'; ctx.fillRect(0,0,64,64); img.src=c.toDataURL('image/png');
 }
 export function setItemThumbnail(id,url){ const img=document.getElementById('thumb-'+id); if(img) img.src=url; }
-export function setItemMeta(id,info){ const m=document.getElementById('meta-'+id); if(!m) return; const fps=info.fps?info.fps.toFixed(2)+' fps':'—'; const fr=info.frames?String(info.frames).padStart(4,'0'):'0000'; const kind=info.animated?'animation sequence':'still image'; m.textContent=`${fps} • ${fr} frames • ${kind}`; }
+export function setItemMeta(id,info){
+  const m=document.getElementById('meta-'+id); if(!m) return;
+  const parts=[];
+  if(info.width && info.height) parts.push(`${info.width} × ${info.height}`);
+  if(info.fps) parts.push(info.fps.toFixed(2)+' fps');
+  if(info.frames != null) parts.push(String(info.frames).padStart(4,'0')+' frames');
+  if(info.duration != null) parts.push(info.duration.toFixed(1)+' seconds');
+  parts.push(info.animated ? 'image sequence' : 'still image');
+  m.textContent=parts.join(' • ');
+}
 export function updateItemProgress(id,ratio){
   const b=document.getElementById('bar-'+id), s=document.getElementById('status-'+id);
   if(b) b.style.width=Math.round(ratio*100)+'%';

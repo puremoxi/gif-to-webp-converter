@@ -113,12 +113,15 @@ async function _binarySearchQuality(ffmpeg,file,settings,onProgress){
 async function _convertImage(ffmpeg,file,settings,onProgress){
   const originalName = String(file?.name || 'image');
   const originalType = String(file?.type || '').toLowerCase();
-  const isGifInput = originalType === 'image/gif' || /\.gif$/i.test(originalName);
+  const isGifInput   = originalType === 'image/gif'  || /\.gif$/i.test(originalName);
+  const isApngInput  = originalType === 'image/apng' || /\.apng$/i.test(originalName);
+  const isVideoInput = /^video\//.test(originalType) || /\.(mp4|mov|webm)$/i.test(originalName);
+  const isAnimatedInput = isGifInput || isApngInput || isVideoInput;
   let outputFormat = settings.outputFormat === 'avif' ? 'avif' : 'webp';
   if(outputFormat === 'avif' && !ffmpeg.supportsAvifEncode){
     throw new Error(`${ffmpeg.coreLabel || 'Selected FFmpeg core'} cannot encode AVIF. Use the isolated AVIF engine instead.`);
   }
-  const shouldStillEncode = outputFormat === 'avif' || !!settings.still || !isGifInput;
+  const shouldStillEncode = outputFormat === 'avif' || !isAnimatedInput;
   const outputName = originalName.replace(/\.[^.]+$/i,`.${outputFormat}`);
   const extMatch = originalName.match(/(\.[^.]+)$/i);
   const inputExt = extMatch ? extMatch[1] : '.bin';
@@ -127,17 +130,24 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
   const outputFs = `out-${token}.${outputFormat}`;
 
   await ffmpeg.writeFile(inputFs, await ffmpeg.fetchFile(file));
-  const args=['-y','-threads','1','-i',inputFs,'-c:v', outputFormat === 'avif' ? 'libaom-av1' : 'libwebp'];
+  const args=['-y','-threads','1'];
+  if(isVideoInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));
+  args.push('-i',inputFs,'-c:v', outputFormat === 'avif' ? 'libaom-av1' : 'libwebp');
 
   const wCap = !settings.noChangeDimensions && settings.maxWidthEnabled && Number.isFinite(settings.resizeWidth) && settings.resizeWidth > 0 ? Math.floor(settings.resizeWidth) : null;
   const hCap = !settings.noChangeDimensions && settings.maxHeightEnabled && Number.isFinite(settings.maxHeight) && settings.maxHeight > 0 ? Math.floor(settings.maxHeight) : null;
+  let vfFilter = null;
   if(wCap && hCap){
-    args.push('-vf', `scale=${wCap}:${hCap}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`);
+    vfFilter = `scale=${wCap}:${hCap}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
   } else if(wCap){
-    args.push('-vf', `scale=${wCap}:-2:force_original_aspect_ratio=decrease`);
+    vfFilter = `scale=${wCap}:-2:force_original_aspect_ratio=decrease`;
   } else if(hCap){
-    args.push('-vf', `scale=-2:${hCap}:force_original_aspect_ratio=decrease`);
+    vfFilter = `scale=-2:${hCap}:force_original_aspect_ratio=decrease`;
   }
+  if(!settings.keepAlpha){
+    vfFilter = vfFilter ? `${vfFilter},format=rgb24` : 'format=rgb24';
+  }
+  if(vfFilter) args.push('-vf', vfFilter);
 
   if(outputFormat === 'avif'){
     const crf = Math.round(63 - ((Number(settings.quality) || 90) * 0.63));
@@ -151,6 +161,7 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
     args.push('-frames:v','1');
     if(outputFormat === 'webp') args.push('-preset','picture');
   } else {
+    if(isVideoInput) args.push('-r', String(settings.maxFps ?? 15));
     args.push('-loop', settings.loop?'0':'-1');
   }
   args.push(outputFs);
@@ -158,7 +169,8 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
   const h=({progress})=>{ onProgress&&onProgress(smooth(progress)); };
   ffmpeg.on('progress',h);
-  const execTimeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error('ffmpeg exec timed out after 30s')),30000));
+  const execTimeoutMs = isAnimatedInput ? 120000 : 30000;
+  const execTimeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error(`ffmpeg exec timed out after ${execTimeoutMs/1000}s`)),execTimeoutMs));
   try{
     const ret = await Promise.race([ffmpeg.exec(args), execTimeout]);
     if(typeof ret === 'number' && ret !== 0) throw new Error(`ffmpeg exited with code ${ret}`);

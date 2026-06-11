@@ -3,18 +3,43 @@ import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
 import { convertToAvif, hasAvifEngineFiles, initAvifEngine } from './modules/avifClient.js';
 import { log } from './modules/logger.js';
 import { createConversionQueue } from './modules/queueManager.js';
-import { getGifInfo } from './modules/gifInfo.js';
+import { getMediaInfo } from './modules/mediaInfo.js';
+import { rasterizeSvg } from './modules/svgRasterizer.js';
 
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
 let webpFfmpeg=null, ffmpegReady=false, queued=0; const converted=new Map();
 const enabledActionTextColor = '#94a3b8';
-const disabledActionTextColor = '#080c13';
+const disabledActionTextColor = '#64748b';
 const WEBP_CORE_BASE = '/vendor/ffmpeg';
 const AVIF_ENGINE_BASE = '/vendor/jsquash-avif';
 
 const removedIds = new Set();
 const fileToId = new WeakMap();
+const queuedDurations = new Map(); // id → duration in seconds
+const queuedWidths    = new Map(); // id → source width in pixels
+
+function syncMaxDurationField() {
+  const slider = document.getElementById('anim-max-duration');
+  const input  = document.getElementById('anim-max-duration-value');
+  if (!slider || !input) return;
+  const val = queuedDurations.size > 0
+    ? Math.ceil(Math.max(...queuedDurations.values()))
+    : 3600;
+  slider.value = String(val);
+  input.value  = String(val);
+}
+
+function syncMaxWidthField() {
+  const slider = document.getElementById('resize-width');
+  const input  = document.getElementById('resize-width-value');
+  if (!slider || !input) return;
+  const val = queuedWidths.size > 0
+    ? Math.max(...queuedWidths.values())
+    : 1200;
+  slider.value = String(val);
+  input.value  = String(val);
+}
 let outputDirectoryHandle = null;
 let avifEngineAvailable = false;
 let avifLoadingPromise = null;
@@ -72,6 +97,10 @@ function removeFromQueue(id){
   removedIds.add(id);
   queue.remove(id);
   converted.delete(id);
+  queuedDurations.delete(id);
+  syncMaxDurationField();
+  queuedWidths.delete(id);
+  syncMaxWidthField();
   const el = document.getElementById(`item-${id}`);
   if (el) el.remove();
   queued = Math.max(0, queued - 1);
@@ -109,7 +138,7 @@ function getSettings(){
     quality: parseInt(document.getElementById('quality').value,10)||90,
     compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
     loop: document.getElementById('loop-toggle').checked,
-    still: document.getElementById('still-toggle').checked,
+    keepAlpha: document.getElementById('keep-alpha-toggle')?.checked ?? false,
     lossless: document.getElementById('lossless-toggle').checked,
     mixed: document.getElementById('mixed-toggle').checked,
     maxWidthEnabled,
@@ -118,7 +147,9 @@ function getSettings(){
     maxHeightEnabled,
     maxHeight,
     targetSizeEnabled,
-    targetSizeKB
+    targetSizeKB,
+    maxFps:         parseInt(document.getElementById('anim-max-fps')?.value,      10) || 24,
+    maxDurationSec: parseInt(document.getElementById('anim-max-duration')?.value,  10) || 3600,
   };
 }
 function syncActionButtonColor(btn) {
@@ -177,14 +208,26 @@ const queue=createConversionQueue(async (file,ctx)=> {
     return { skipped: true, blob: null, name: null };
   }
   log(`Converting: ${file.name}  (${(file.size/1024).toFixed(1)} KB)`, 'info');
+  let convFile = file;
+  const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
+  if (isSvg) {
+    const s = ctx.settings;
+    log(`Rasterizing SVG: ${file.name}`, 'info');
+    const pngBlob = await rasterizeSvg(
+      file,
+      s.maxWidthEnabled && s.resizeWidth ? s.resizeWidth : null,
+      s.maxHeightEnabled && s.maxHeight  ? s.maxHeight  : null
+    );
+    convFile = new File([pngBlob], file.name.replace(/\.svg$/i, '.png'), { type: 'image/png' });
+  }
   let out;
   try {
     if (ctx.settings.outputFormat === 'avif') {
       await getEngineForSettings(ctx.settings);
-      out = await convertToAvif(file, ctx.settings, ctx.onProgress);
+      out = await convertToAvif(convFile, ctx.settings, ctx.onProgress);
     } else {
       const engine = await getEngineForSettings(ctx.settings);
-      out = await convertToWebP(engine,file,ctx.settings,ctx.onProgress);
+      out = await convertToWebP(engine,convFile,ctx.settings,ctx.onProgress);
     }
   } catch(err) {
     log(`Error: ${file.name} — ${err?.message || err}`, 'error');
@@ -262,9 +305,17 @@ async function handle(files){
       if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
     } catch {}
 
-    getGifInfo(it.file)
+    getMediaInfo(it.file)
       .then(async info => {
         setItemMeta(it.id, info);
+        if (info.duration != null && info.duration > 0) {
+          queuedDurations.set(it.id, info.duration);
+          syncMaxDurationField();
+        }
+        if (info.width != null && info.width > 0) {
+          queuedWidths.set(it.id, info.width);
+          syncMaxWidthField();
+        }
         try {
           const el = await waitForItemEl(it.id, 1500);
           if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
@@ -272,12 +323,45 @@ async function handle(files){
       })
       .catch(()=>{});
 
-    try{
-      const url=URL.createObjectURL(it.file); const img=new Image(); img.src=url; await img.decode();
-      const size=128; const ratio=(img.width||1)/(img.height||1); const w=Math.min(size,img.width||size); const h=Math.round(w/ratio);
-      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
-      const blob=await new Promise(res=>c.toBlob(res,'image/png')); if(blob) setItemThumbnail(it.id,URL.createObjectURL(blob));
-    }catch{}
+    const isVideo = /^video\//.test(it.file.type) || /\.(mp4|mov|webm)$/i.test(it.file.name);
+    if (isVideo) {
+      try {
+        const url = URL.createObjectURL(it.file);
+        const video = document.createElement('video');
+        video.src = url; video.muted = true; video.playsInline = true;
+        await new Promise(r => { video.addEventListener('loadeddata', r, { once: true }); video.load(); });
+        video.currentTime = 0;
+        await new Promise(r => { video.addEventListener('seeked', r, { once: true }); });
+        const vw = video.videoWidth || 1; const vh = video.videoHeight || 1;
+        const w = 128; const h = Math.round(128 * vh / vw);
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(video, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+        if (blob) setItemThumbnail(it.id, URL.createObjectURL(blob));
+      } catch {}
+    } else {
+      const url = URL.createObjectURL(it.file);
+      let thumbnailSet = false;
+      try {
+        const img = new Image(); img.src = url; await img.decode();
+        const size=128; const ratio=(img.width||1)/(img.height||1); const w=Math.min(size,img.width||size); const h=Math.round(w/ratio);
+        const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+        const blob=await new Promise(res=>c.toBlob(res,'image/png')); if(blob){ setItemThumbnail(it.id,URL.createObjectURL(blob)); thumbnailSet=true; }
+      } catch { /* browser cannot decode this format natively */ }
+      finally { URL.revokeObjectURL(url); }
+      if (!thumbnailSet) {
+        const ext = (it.file.name.match(/\.([^.]+)$/)?.[1] || '???').toUpperCase().slice(0, 4);
+        const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, 128, 128);
+        ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.strokeRect(4, 4, 120, 120);
+        ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(ext, 64, 64);
+        const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+        if (blob) setItemThumbnail(it.id, URL.createObjectURL(blob));
+      }
+    }
   }
 }
 
@@ -318,7 +402,7 @@ startBtn.addEventListener('click', async ()=>{
 });
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
-  queue.clear(); queued=0; removedIds.clear(); status.textContent='Ready. Please add files.'; converted.clear(); updateControls();
+  queue.clear(); queued=0; removedIds.clear(); converted.clear(); queuedDurations.clear(); syncMaxDurationField(); queuedWidths.clear(); syncMaxWidthField(); status.textContent='Ready. Please add files.'; updateControls();
   const ag = document.getElementById('aggregate-time');
   if (ag) ag.textContent = '';
 });

@@ -106,6 +106,10 @@ async function fileToImageData(file, settings) {
     canvas.width = dims.width;
     canvas.height = dims.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!settings.keepAlpha) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, dims.width, dims.height);
+    }
     ctx.drawImage(bitmap, 0, 0, dims.width, dims.height);
     return ctx.getImageData(0, 0, dims.width, dims.height);
   } finally {
@@ -115,9 +119,11 @@ async function fileToImageData(file, settings) {
 
 function avifOptions(settings) {
   const compression = Number.isFinite(settings.compressionLevel) ? settings.compressionLevel : 6;
+  const quality = Math.max(0, Math.min(100, Number(settings.quality) || 90));
   return {
     ...defaultOptions,
-    quality: Math.max(0, Math.min(100, Number(settings.quality) || 90)),
+    quality,
+    qualityAlpha: settings.keepAlpha ? quality : -1,
     speed: Math.max(4, Math.min(10, Math.round(10 - compression))),
   };
 }

@@ -150,11 +150,16 @@ function formatMB(bytes) {
   const mb = bytes / (1024 * 1024);
   return `${mb.toFixed(2)} MB`.replace(/\.00 MB$/, ' MB');
 }
-function writeSizeLine(infoBoxEl, text) {
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function writeSizeLine(infoBoxEl, text, htmlSuffix = '') {
   if (!infoBoxEl) return;
   const line = Array.from(infoBoxEl.querySelectorAll('.text-slate-400.text-sm'))
     .find(el => !(el.id && el.id.startsWith('meta-file-')));
-  if (line) line.textContent = text;
+  if (!line) return;
+  if (htmlSuffix) { line.innerHTML = escapeHtml(text) + htmlSuffix; }
+  else { line.textContent = text; }
 }
 
 async function populateResolutionUI(queueItemEl, file) {
@@ -178,11 +183,14 @@ function writeSizeSummaryByEls(queueItemEl, gifBytes, webpBytes) {
   const metaEl = findMetaLine(queueItemEl);
   const infoBox = findInfoBoxFromMeta(metaEl);
   if (!infoBox) return;
-  const gifMB = formatMB(gifBytes);
+  const gifMB  = formatMB(gifBytes);
   const webpMB = formatMB(webpBytes);
-  const reduction = gifBytes > 0 ? Math.max(0, (1 - (webpBytes / gifBytes)) * 100) : 0;
-  const perc = `${reduction.toFixed(1)}% reduction`.replace(/^0\.0% reduction$/, '0% reduction');
-  writeSizeLine(infoBox, `${gifMB} | ${webpMB} | ${perc}`);
+  const ratio  = gifBytes > 0 ? (1 - (webpBytes / gifBytes)) * 100 : 0;
+  let percHtml;
+  if      (ratio >  0.05) percHtml = `&#8595; ${ratio.toFixed(1)}%`;
+  else if (ratio < -0.05) percHtml = `<span style="color:#fb923c">&#8593; ${Math.abs(ratio).toFixed(1)}% larger</span>`;
+  else                    percHtml = `&#8776; 0%`;
+  writeSizeLine(infoBox, `${gifMB} | ${webpMB} | `, percHtml);
 }
 
 // --------- Remove control placed where Download appears ---------

@@ -58,7 +58,7 @@
             <ul style="margin:0;padding-left:16px;list-style:disc;">
               <li>Refer to README for proper installation.</li>
               <li>All files processed on local machine.</li>
-              <li>gif, jpg and png currently supported.</li>
+              <li>GIF, JPG, PNG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, MP4, MOV, and WebM supported.</li>
             </ul>
           </div>
         </span>
@@ -67,10 +67,10 @@
     </header>
 
     <div id="dropzone" class="relative border-dashed border-gray-700 rounded-lg p-8 md:p-12 text-center transition-all duration-300 hover:border-gray-500 mb-2" style="max-width:700px;margin-left:auto;margin-right:auto;border-width:2px;">
-      <input type="file" id="fileInput" multiple accept="image/gif,image/png,image/jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Choose image files"/>
+      <input type="file" id="fileInput" multiple accept="image/gif,image/png,image/jpeg,image/webp,image/bmp,image/tiff,image/apng,image/x-icon,image/x-tga,image/svg+xml,video/mp4,video/quicktime,video/webm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Choose image files"/>
       <div class="pointer-events-none select-none">
         <p class="text-xl font-medium" style="color:#94a3b8">Drag &amp; Drop</p>
-        <p style="font-size:12px;font-style:italic;color:#64748b;">or click to select files</p>
+        <p style="font-size:12px;font-style:italic;color:#64748b;">or click to select files &middot; GIF, PNG, JPG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, MP4, MOV, WebM</p>
       </div>
       <p id="converter-status" style="position:absolute;bottom:10px;right:14px;padding:3px 10px;border-radius:6px;border:1px solid #374151;background:transparent;font-size:12px;color:#374151;pointer-events:none;user-select:none;"></p>
     </div>
@@ -78,9 +78,9 @@
     <div id="batch-time" class="mb-4 text-sm text-slate-300 text-center" style="max-width:700px;margin-left:auto;margin-right:auto;"></div>
 
     <div style="display:flex;gap:8px;max-width:700px;margin:12px auto;">
-      <button id="start-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#080c13;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Start Conversion</button>
-      <button id="clear-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#080c13;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear Queue</button>
-      <button id="download-all" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#080c13;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Download ALL</button>
+      <button id="start-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#64748b;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Start Conversion</button>
+      <button id="clear-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#64748b;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear Queue</button>
+      <button id="download-all" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#64748b;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Download ALL</button>
     </div>
 
     <section id="advanced" class="mb-4" style="max-width:700px;margin-left:auto;margin-right:auto;">
@@ -137,15 +137,31 @@
             <div style="height:1px;background:#334155;margin:6px 0;"></div>
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Animation &amp; Mode</div>
             <label id="loop-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="loop-toggle" checked/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Loop Animation</span></label>
-            <label class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="still-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Still Image</span></label>
             <label id="lossless-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="lossless-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Lossless Compression</span></label>
             <label id="mixed-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="mixed-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Mixed Compression</span></label>
+            <div style="height:1px;background:#334155;margin:6px 0;"></div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Animated Output</div>
+            <label class="space-y-1">
+              <div style="display:flex;align-items:center;gap:4px;">Max FPS<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:220px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>Caps output frame rate for animated inputs (GIF, APNG, video). Lower values reduce file size significantly.</div></span></div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input id="anim-max-fps" type="range" min="1" max="60" value="24" style="flex:1;"/>
+                <input id="anim-max-fps-value" class="value-input" type="number" min="1" max="60" value="24" aria-label="Max FPS value" style="width:40px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
+              </div>
+            </label>
+            <label class="space-y-1">
+              <div style="display:flex;align-items:center;gap:4px;">Max Duration (sec)<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:220px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>Trims animated output to this many seconds. Applies to video, GIF, and APNG inputs.</div></span></div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input id="anim-max-duration" type="range" min="1" max="3600" value="3600" style="flex:1;"/>
+                <input id="anim-max-duration-value" class="value-input" type="number" min="1" max="3600" value="3600" aria-label="Max Duration value" style="width:40px;height:26px;border:1px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#64748b;flex-shrink:0;background:transparent;padding:0 4px;"/>
+              </div>
+            </label>
           </div>
 
           <!-- Column 2: Dimensions & File Size -->
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Dimensions &amp; File Size</div>
             <label id="ncd-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="no-change-dimensions-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Do Not Change Dimensions</span></label>
+            <label class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="keep-alpha-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Keep Alpha Channel<span class="form-info-icon" style="position:relative;display:inline-block;vertical-align:super;font-size:0.6em;cursor:help;margin-left:2px;line-height:1;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#64748b" stroke-width="1.2"/><text x="6" y="10" text-anchor="middle" fill="#64748b" font-size="7" font-family="Georgia,serif" font-style="italic">i</text></svg><div class="form-info-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:18px;z-index:50;width:240px;background:#1e293b;border:1px solid #475569;border-radius:8px;padding:8px 12px;text-align:left;font-size:12px;font-weight:400;color:#cbd5e1;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;"><div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #475569;"></div><div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #1e293b;"></div>When off, transparency is stripped and the alpha channel is discarded. Smaller output files. When on, transparency is preserved in the WebP or AVIF output.</div></span></span></label>
             <label id="max-height-toggle-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="max-height-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Max Height Constraint</span></label>
             <label id="max-width-toggle-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="max-width-toggle" checked/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Max Width Constraint</span></label>
             <label id="target-size-toggle-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="target-size-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Target File Size</span></label>

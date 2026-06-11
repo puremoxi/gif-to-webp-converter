@@ -1,11 +1,22 @@
 import { addQueuedItem, updateItemProgress, setItemConverted, setItemError } from './ui.js';
 export function createConversionQueue(proc){
   const q=[];
+  const ACCEPTED_TYPES = new Set([
+    'image/gif','image/png','image/jpeg',
+    'image/webp',
+    'image/bmp','image/x-bmp',
+    'image/tiff','image/x-tiff',
+    'image/apng',
+    'image/x-icon','image/vnd.microsoft.icon',
+    'image/x-tga','image/x-targa',
+    'image/svg+xml',
+    'video/mp4','video/quicktime','video/webm',
+  ]);
+  const ACCEPTED_EXT = /\.(gif|png|jpe?g|webp|bmp|tiff?|apng|ico|tga|svg|mp4|mov|webm)$/i;
   const isConvertibleImage = (file) => {
     if (!file) return false;
-    if (['image/gif', 'image/png', 'image/jpeg'].includes(file.type)) return true;
-    const name = String(file.name || '').toLowerCase();
-    return /\.(gif|png|jpe?g)$/.test(name);
+    if (ACCEPTED_TYPES.has(file.type)) return true;
+    return ACCEPTED_EXT.test(String(file.name || ''));
   };
   return {
     async add(files){
