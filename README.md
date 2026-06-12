@@ -1,4 +1,6 @@
-# Shrink Ray --> v5.1 (Presets, Expanded Formats, Multi-Thread)
+<img src="icons/app-icon.png" alt="Shrink Ray" width="48" align="left" style="margin-right:12px">
+
+# Shrink Ray v5.1
 
 A self-contained browser-based image and video converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
@@ -24,7 +26,9 @@ All processing is performed locally — no files are uploaded.
 
 ## About This Application
 
-Shrink Ray is a tool for compressing still images and video files into modern, web-optimized formats so they load faster and display more efficiently online. It runs entirely in your browser — no files are uploaded to any server.
+Shrink Ray is a tool for compressing still images and video files into modern, web-optimized formats so they load faster and display more efficiently online. It runs entirely in your browser — no files are uploaded to any server. Output formats are **WebP** and **AVIF**, two highly efficient modern image formats. Conversion is powered by **FFmpeg**, compiled to WebAssembly so it runs locally at near-native speed without any server-side processing.
+
+---
 
 <a id="what-is-webp"></a>
 
