@@ -58,34 +58,13 @@ FFmpeg is a powerful, free, and open-source software project capable of handling
 
 <a id="quick-start-option-01"></a>
 
-## Quick Start (Windows / PowerShell)
+## Quick Start (Windows)
 
-Use this option when you are running the tool from a Windows-based project folder or from a Windows-use copy of the repository.
+1. Go to the [Releases page](https://github.com/puremoxi/ShrinkRay/releases/latest) and download `ShrinkRay.exe`.
 
-1. Download or clone the repository.
+2. Double-click `ShrinkRay.exe` — your default browser opens automatically at `http://localhost:3000`.
 
-   ```powershell
-   git clone https://github.com/puremoxi/ShrinkRay.git
-   ```
-
-2. Navigate to the root directory of the repository (`ShrinkRay`).
-
-```powershell
-cd $HOME\OneDrive\Documents\GitHub\ShrinkRay\
-```
-
-3. Run the program with strict CSP + COOP/COEP headers.
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-npm run serve
-```
-
-4. Open the local app in a browser.
-
-```text
-http://localhost:3000
-```
+That's it. No installation, no Node.js required.
 
 ---
 

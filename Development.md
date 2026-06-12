@@ -6,6 +6,7 @@ This file is for my own reference. It holds setup instructions, architectural de
 
 ## Contents
 
+- [Quick Start — Option 01 (Windows / PowerShell — Run from Source)](#quick-start-option-01)
 - [Quick Start — Option 02 (WSL Development + Windows Everyday Launcher)](#quick-start-option-02)
 - [Project Hierarchy](#project-hierarchy)
 - [Project Structure](#project-structure)
@@ -22,6 +23,44 @@ This file is for my own reference. It holds setup instructions, architectural de
 - [Desktop Executable — Explorer Icon Limitation](#desktop-executable--explorer-icon-limitation)
 - [Build From Scratch (Windows / PowerShell)](#build-from-scratch)
 - [Validation](#validation)
+
+---
+
+<a id="quick-start-option-01"></a>
+
+## Quick Start — Option 01 (Windows / PowerShell — Run from Source)
+
+Use this option when you want to run the tool directly from a Windows clone of the repository without building the exe. Requires Node.js and npm installed on Windows.
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/puremoxi/ShrinkRay.git
+```
+
+### 2. Navigate to the project folder
+
+```powershell
+cd $HOME\OneDrive\Documents\GitHub\ShrinkRay\
+```
+
+### 3. Install dependencies (first run only)
+
+```powershell
+npm install
+```
+
+### 4. Start the server
+
+```powershell
+npm run serve
+```
+
+### 5. Open the app in a browser
+
+```text
+http://localhost:3000
+```
 
 ---
 
