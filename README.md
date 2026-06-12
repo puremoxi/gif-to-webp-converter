@@ -77,7 +77,7 @@ That's it. No installation, no Node.js required.
 ## 🆕 Features --> v5.1
 
 - Basic Features
-  - Converts GIF, PNG, JPG/JPEG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, MP4, MOV, and WebM files to WebP or AVIF.
+  - Converts GIF, PNG, JPG/JPEG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, HEIC, HEIF, MP4, MOV, and WebM files to WebP or AVIF.
   - SVG files are automatically rasterized to PNG before conversion.
   - Video files (MP4, MOV, WebM) are converted to animated WebP, or still WebP/AVIF from the first frame.
   - Batch conversions (multiple files simultaneously)
@@ -161,7 +161,7 @@ The Shrink Ray interface loads with a Drag & Drop zone and collapsed Settings, D
 
 **2. Drop your files onto the drop zone (or click to browse).**
 
-Drag GIF, PNG, JPG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, MP4, MOV, or WebM files directly onto the drop zone. Each file becomes a card in the Queue showing its filename, file size, resolution, frame count, FPS, duration, and whether it is an animation or still image. The **×** button on each card lets you remove individual files before conversion starts.
+Drag GIF, PNG, JPG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, HEIC, HEIF, MP4, MOV, or WebM files directly onto the drop zone. Each file becomes a card in the Queue showing its filename, file size, resolution, frame count, FPS, duration, and whether it is an animation or still image. The **×** button on each card lets you remove individual files before conversion starts.
 
 ![Shrink Ray — files added to queue](./images/UI_v51_04_files_queued.png)
 

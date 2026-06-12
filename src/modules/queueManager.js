@@ -10,9 +10,10 @@ export function createConversionQueue(proc){
     'image/x-icon','image/vnd.microsoft.icon',
     'image/x-tga','image/x-targa',
     'image/svg+xml',
+    'image/heic','image/heif',
     'video/mp4','video/quicktime','video/webm',
   ]);
-  const ACCEPTED_EXT = /\.(gif|png|jpe?g|webp|bmp|tiff?|apng|ico|tga|svg|mp4|mov|webm)$/i;
+  const ACCEPTED_EXT = /\.(gif|png|jpe?g|webp|bmp|tiff?|apng|ico|tga|svg|heic|heif|mp4|mov|webm)$/i;
   const isConvertibleImage = (file) => {
     if (!file) return false;
     if (ACCEPTED_TYPES.has(file.type)) return true;

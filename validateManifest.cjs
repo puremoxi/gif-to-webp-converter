@@ -138,6 +138,16 @@ const checks = [
     ],
   },
   {
+    label: 'HEIC/HEIF decoder (jsquash-heic)',
+    requiredDir: 'vendor/jsquash-heic',
+    files: [
+      { path: 'vendor/jsquash-heic/decode.js',           minBytes: 500 },
+      { path: 'vendor/jsquash-heic/utils.js',            minBytes: KB(1) },
+      { path: 'vendor/jsquash-heic/codec/dec/heic_dec.js',   minBytes: KB(10) },
+      { path: 'vendor/jsquash-heic/codec/dec/heic_dec.wasm', minBytes: KB(100) },
+    ],
+  },
+  {
     label: 'Tailwind CSS (optional but recommended)',
     requiredDir: 'vendor/css',
     files: [

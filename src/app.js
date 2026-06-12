@@ -5,6 +5,7 @@ import { log, logAlways } from './modules/logger.js';
 import { createConversionQueue } from './modules/queueManager.js';
 import { getMediaInfo } from './modules/mediaInfo.js';
 import { rasterizeSvg } from './modules/svgRasterizer.js';
+import { isHeicFile, decodeHeicToBlob, hasHeicEngineFiles } from './modules/heicClient.js';
 import { listPresets, savePreset, deletePreset, applyPreset, DEFAULT_PRESET } from './modules/presetsManager.js';
 
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
@@ -280,6 +281,11 @@ async function getEngineForSettings(settings) {
     } else {
       log(`AVIF engine not installed at ${AVIF_ENGINE_BASE}; WebP engine remains active.`, 'warn');
     }
+    const heicAvailable = await hasHeicEngineFiles();
+    log(heicAvailable
+      ? 'HEIC/HEIF decoder found. HEIC and HEIF inputs are supported.'
+      : 'HEIC/HEIF decoder not found at /vendor/jsquash-heic; HEIC inputs will be rejected.',
+      heicAvailable ? 'info' : 'warn');
     syncOutputFormatAvailability();
     ffmpegReady=true; status.textContent='Ready. Please add files.'; updateControls();
   }catch(e){ console.error(e); status.textContent='Error loading converter engine. Ensure vendor/ffmpeg contains loader chunks and core-mt UMD; use node server.cjs.'; }
@@ -304,6 +310,9 @@ const queue=createConversionQueue(async (file,ctx)=> {
       s.maxHeightEnabled && s.maxHeight  ? s.maxHeight  : null
     );
     convFile = new File([pngBlob], file.name.replace(/\.svg$/i, '.png'), { type: 'image/png' });
+  } else if (isHeicFile(file)) {
+    const pngBlob = await decodeHeicToBlob(file);
+    convFile = new File([pngBlob], file.name.replace(/\.heic$/i, '.png').replace(/\.heif$/i, '.png'), { type: 'image/png' });
   }
   let out;
   try {
