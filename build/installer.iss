@@ -15,7 +15,7 @@
 #define AppVersion   "5.0.0"
 #define AppPublisher "Shrink Ray"
 #define AppExe       "ShrinkRay.exe"
-#define AppURL       "https://github.com/puremoxi/gif-to-webp-converter"
+#define AppURL       "https://github.com/puremoxi/ShrinkRay"
 
 ; ── Setup metadata ────────────────────────────────────────────────────────────
 [Setup]

@@ -35,10 +35,10 @@ This workflow keeps one source of truth for development:
 
 ```text
 WSL / Ubuntu development repo:
-/home/rmcdougal/projects/gif-to-webp-converter
+/home/rmcdougal/projects/ShrinkRay
 
 Windows launcher location:
-C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
+C:\Users\ryanm\tools\launchers\ShrinkRay.bat
 ```
 
 The Windows `.bat` file is only a launcher. It does not duplicate the source repo. It calls a small WSL runner script, which loads `nvm`, switches into the project folder, and runs `npm run serve`.
@@ -48,7 +48,7 @@ The Windows `.bat` file is only a launcher. It does not duplicate the source rep
 From WSL/Ubuntu:
 
 ```bash
-cd ~/projects/gif-to-webp-converter
+cd ~/projects/ShrinkRay
 which node
 which npm
 node -v
@@ -71,7 +71,7 @@ From WSL/Ubuntu:
 ```bash
 mkdir -p ~/bin
 
-cat > ~/bin/run-gif-to-webp-converter <<'EOF'
+cat > ~/bin/run-ShrinkRay <<'EOF'
 #!/usr/bin/env bash
 
 export NVM_DIR="$HOME/.nvm"
@@ -83,7 +83,7 @@ else
   exit 1
 fi
 
-cd "$HOME/projects/gif-to-webp-converter" || exit 1
+cd "$HOME/projects/ShrinkRay" || exit 1
 
 echo "Using node: $(which node)"
 echo "Using npm:  $(which npm)"
@@ -94,7 +94,7 @@ echo
 npm run serve
 EOF
 
-chmod +x ~/bin/run-gif-to-webp-converter
+chmod +x ~/bin/run-ShrinkRay
 ```
 
 ### 3. Test the WSL runner directly
@@ -102,7 +102,7 @@ chmod +x ~/bin/run-gif-to-webp-converter
 From WSL/Ubuntu:
 
 ```bash
-~/bin/run-gif-to-webp-converter
+~/bin/run-ShrinkRay
 ```
 
 The server should start and print the local URL. Open the app in Windows at:
@@ -128,9 +128,9 @@ From WSL/Ubuntu:
 ```bash
 WINTOOLS="/mnt/c/Users/ryanm/tools"
 
-cat > "$WINTOOLS/launchers/gif-to-webp-converter.bat" <<'EOF'
+cat > "$WINTOOLS/launchers/ShrinkRay.bat" <<'EOF'
 @echo off
-wsl.exe -d Ubuntu-22.04 -- bash --noprofile --norc /home/rmcdougal/bin/run-gif-to-webp-converter
+wsl.exe -d Ubuntu-22.04 -- bash --noprofile --norc /home/rmcdougal/bin/run-ShrinkRay
 pause
 EOF
 ```
@@ -140,7 +140,7 @@ EOF
 From Windows PowerShell:
 
 ```powershell
-C:\Users\ryanm\tools\launchers\gif-to-webp-converter.bat
+C:\Users\ryanm\tools\launchers\ShrinkRay.bat
 ```
 
 Then open:
@@ -168,7 +168,7 @@ If the launcher fails by using Windows Node/npm instead of WSL Node/npm, confirm
 ## Project Hierarchy
 
 ```text
-gif-to-webp-converter/
+ShrinkRay/
 ├─ index.html
 ├─ launcher.cjs                 # Desktop exe entry point (pkg target)
 ├─ server.cjs                   # Local Node dev server with COOP/COEP headers
@@ -389,7 +389,7 @@ The Explorer icon is purely cosmetic metadata. The application inside the binary
 Although the repository has all of the files needed to run properly using Google Chrome in Windows, if you want to rebuild key components from source:
 
 ```powershell
-cd $HOME\OneDrive\Documents\GitHub\gif-to-webp-converter\
+cd $HOME\OneDrive\Documents\GitHub\ShrinkRay\
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 # Tailwind (self-hosted)

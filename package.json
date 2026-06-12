@@ -1,5 +1,5 @@
 {
-  "name": "gif-to-webp-converter",
+  "name": "shrinkray",
   "version": "5.0.0",
   "private": true,
   "main": "launcher.cjs",

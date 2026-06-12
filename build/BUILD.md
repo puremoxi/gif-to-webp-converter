@@ -114,7 +114,7 @@ pkg cache (`~/.pkg-cache`) or change the Node target version.
    ```powershell
    mkdir C:\temp
    copy "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\.pkg-cache\v3.5\fetched-v20.18.0-win-x64" C:\temp\
-   copy "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\projects\gif-to-webp-converter\build\icon.ico" C:\temp\
+   copy "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\projects\ShrinkRay\build\icon.ico" C:\temp\
    cd C:\temp
    .\rcedit-x64.exe fetched-v20.18.0-win-x64 --set-icon icon.ico
    copy C:\temp\fetched-v20.18.0-win-x64 "\\wsl.localhost\Ubuntu-22.04\home\rmcdougal\.pkg-cache\v3.5\fetched-v20.18.0-win-x64"

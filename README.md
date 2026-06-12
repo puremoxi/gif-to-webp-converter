@@ -65,13 +65,13 @@ Use this option when you are running the tool from a Windows-based project folde
 1. Download or clone the repository.
 
    ```powershell
-   git clone https://github.com/puremoxi/gif-to-webp-converter.git
+   git clone https://github.com/puremoxi/ShrinkRay.git
    ```
 
-2. Navigate to the root directory of the repository (`gif-to-webp-converter`).
+2. Navigate to the root directory of the repository (`ShrinkRay`).
 
 ```powershell
-cd $HOME\OneDrive\Documents\GitHub\gif-to-webp-converter\
+cd $HOME\OneDrive\Documents\GitHub\ShrinkRay\
 ```
 
 3. Run the program with strict CSP + COOP/COEP headers.
