@@ -184,11 +184,10 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     if(Number.isFinite(settings.compressionLevel)) args.push('-cpu-used', String(Math.max(0, Math.min(8, 8 - Number(settings.compressionLevel)))));
   } else {
     if(Number.isFinite(settings.compressionLevel)) args.push('-compression_level',String(settings.compressionLevel));
-    if(settings.lossless) args.push('-lossless','1'); else args.push('-qscale',String(settings.quality));
+    if(settings.lossless) args.push('-lossless','1'); else args.push('-q:v',String(settings.quality));
   }
   if(shouldStillEncode){
     args.push('-frames:v','1');
-    if(outputFormat === 'webp') args.push('-preset','picture');
   } else {
     if(isVideoInput) args.push('-r', String(settings.maxFps ?? 15));
     args.push('-loop', settings.loop?'0':'-1');
