@@ -249,7 +249,7 @@ function startServer(port, isFallback) {
 // ── Entry point ──────────────────────────────────────────────────────────────
 console.log('');
 console.log('  ╔══════════════════════════════╗');
-console.log(`  ║   Shrink Ray  v${APP_VERSION}        ║`);
+console.log('  ║' + ('   Shrink Ray  v' + APP_VERSION).padEnd(30) + '║');
 console.log('  ║   Local image converter      ║');
 console.log('  ╚══════════════════════════════╝');
 console.log('');
