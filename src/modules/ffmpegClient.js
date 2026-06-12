@@ -133,10 +133,20 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   const inputFs = `in-${token}${inputExt}`;
   const outputFs = `out-${token}.${outputFormat}`;
 
-  log(`Loading: ${originalName} → ${outputFormat}`, 'info');
+  // Use file.size (always valid on File/Blob) for timeouts — fileBytes.length becomes 0
+  // after writeFile transfers the ArrayBuffer to the Web Worker (detached buffer).
+  const fileSizeBytes = file.size || 0;
+  const fileMB = fileSizeBytes / (1024 * 1024);
+  const writeLimitMs = Math.min(120000, 20000 + Math.ceil(fileMB) * 10000);
+  // Scale exec timeout: animated 2 min; stills 90s base + 15s/MB, capped at 5 min.
+  const execTimeoutMs = isAnimatedInput
+    ? 300000
+    : Math.min(300000, 90000 + Math.ceil(fileMB) * 15000);
+
+  log(`Loading: ${originalName} → ${outputFormat}  (${(fileSizeBytes/1024).toFixed(1)} KB  |  write≤${writeLimitMs/1000}s  exec≤${execTimeoutMs/1000}s)`, 'info');
   const fileBytes = await ffmpeg.fetchFile(file);
-  // Scale write timeout with file size: 20s base + 10s per MB, capped at 120s.
-  const writeLimitMs = Math.min(120000, 20000 + Math.ceil(fileBytes.length / (1024 * 1024)) * 10000);
+  log(`Fetched ${(fileBytes.length/1024).toFixed(1)} KB into WASM memory`, 'info');
+
   const writeTimeoutErr = new Error(`ffmpeg writeFile timed out after ${writeLimitMs / 1000}s`);
   writeTimeoutErr.needsReinit = true;
   let writeTimerHandle;
@@ -148,6 +158,7 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   } finally {
     clearTimeout(writeTimerHandle);
   }
+  log(`Written to WASM FS as ${inputFs}`, 'info');
   const args=['-y','-threads','1'];
   if(isVideoInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));
   args.push('-i',inputFs,'-c:v', outputFormat === 'avif' ? 'libaom-av1' : 'libwebp');
@@ -186,11 +197,10 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   log('ffmpeg ' + args.join(' '), 'cmd');
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
   const h=({progress})=>{ onProgress&&onProgress(smooth(progress)); };
+  const ffLines = [];
+  const ffLog = ({ message }) => { if (message) ffLines.push(String(message)); };
   ffmpeg.on('progress',h);
-  // Scale exec timeout: animated gets 2 min; stills get 30s + 5s/MB (capped 90s).
-  const execTimeoutMs = isAnimatedInput
-    ? 120000
-    : Math.min(90000, 30000 + Math.ceil(fileBytes.length / (1024 * 1024)) * 5000);
+  ffmpeg.on('log', ffLog);
   const execTimeoutErr = new Error(`ffmpeg exec timed out after ${execTimeoutMs/1000}s`);
   execTimeoutErr.needsReinit = true;
   let execTimerHandle;
@@ -199,10 +209,22 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   });
   try{
     const ret = await Promise.race([ffmpeg.exec(args), execTimeout]);
-    if(typeof ret === 'number' && ret !== 0) throw new Error(`ffmpeg exited with code ${ret}`);
+    if(typeof ret === 'number' && ret !== 0) {
+      const tail = ffLines.slice(-5).join(' | ');
+      throw new Error(`ffmpeg exited with code ${ret}${tail ? ` — ${tail}` : ''}`);
+    }
+  } catch(execErr) {
+    // Emit the last few lines of FFmpeg's own output to help diagnose failures
+    if (ffLines.length) {
+      const relevant = ffLines.filter(l => /error|invalid|unsupported|failed|no such/i.test(l));
+      const tail = (relevant.length ? relevant : ffLines).slice(-6);
+      tail.forEach(l => log(`  ffmpeg: ${l}`, 'ffmpeg'));
+    }
+    throw execErr;
   } finally {
     clearTimeout(execTimerHandle);
     try{ ffmpeg.off('progress',h);}catch{}
+    try{ ffmpeg.off('log', ffLog);}catch{}
   }
   const data=await ffmpeg.readFile(outputFs);
   try{ await ffmpeg.deleteFile(inputFs);}catch{}

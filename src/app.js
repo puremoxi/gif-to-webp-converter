@@ -342,7 +342,7 @@ const queue=createConversionQueue(async (file,ctx)=> {
     throw err;
   }
   const reduction = file.size > 0 ? Math.max(0,(1-(out.blob.size/file.size))*100).toFixed(1) : '0.0';
-  log(`Done: ${out.name}  ${(out.blob.size/1024).toFixed(1)} KB  (↓ ${reduction}%)`, 'ok');
+  log(`Done: ${out.name}  ${(out.blob.size/1024).toFixed(1)} KB  (↓ ${reduction}%)`, 'success');
   // Auto-save immediately on conversion complete.
   try {
     const dot = out.name.lastIndexOf('.');

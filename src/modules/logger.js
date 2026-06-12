@@ -1,9 +1,11 @@
 const LEVELS = {
-  info:  { label: 'INFO ', color: '#cbd5e1' },
-  cmd:   { label: 'CMD  ', color: '#818cf8' },
-  ok:    { label: 'OK   ', color: '#4ade80' },
-  warn:  { label: 'WARN ', color: '#fbbf24' },
-  error: { label: 'ERROR', color: '#f87171' },
+  info:    { label: 'INFO   ', color: '#cbd5e1' },
+  cmd:     { label: 'CMD    ', color: '#818cf8' },
+  ok:      { label: 'OK     ', color: '#4ade80' },
+  success: { label: 'SUCCESS', color: '#22d3ee' },
+  warn:    { label: 'WARN   ', color: '#fbbf24' },
+  error:   { label: 'ERROR  ', color: '#f87171' },
+  ffmpeg:  { label: 'FFMPEG ', color: '#94a3b8' },
 };
 
 function escapeHtml(s) {
