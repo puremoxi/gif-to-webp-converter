@@ -131,8 +131,12 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
 
   log(`Loading: ${originalName} → ${outputFormat}`, 'info');
   const fileBytes = await ffmpeg.fetchFile(file);
+  // Scale timeout with file size: 20s base + 10s per MB, capped at 120s.
+  const writeLimitMs = Math.min(120000, 20000 + Math.ceil(fileBytes.length / (1024 * 1024)) * 10000);
+  const writeTimeoutErr = new Error(`ffmpeg writeFile timed out after ${writeLimitMs / 1000}s`);
+  writeTimeoutErr.needsReinit = true;
   const writeTimeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('ffmpeg writeFile timed out after 15s')), 15000));
+    setTimeout(() => { try { ffmpeg.terminate?.(); } catch {} reject(writeTimeoutErr); }, writeLimitMs));
   await Promise.race([ffmpeg.writeFile(inputFs, fileBytes), writeTimeout]);
   const args=['-y','-threads','1'];
   if(isVideoInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));

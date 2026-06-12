@@ -325,6 +325,20 @@ const queue=createConversionQueue(async (file,ctx)=> {
     }
   } catch(err) {
     log(`Error: ${file.name} — ${err?.message || err}`, 'error');
+    if (err?.needsReinit) {
+      log('WebP engine terminated after timeout — reinitializing for next file…', 'warn');
+      status.textContent = 'Restarting WebP engine…';
+      try {
+        webpFfmpeg = await initFFmpeg({ base: WEBP_CORE_BASE, label: 'WebP engine' });
+        status.textContent = 'Ready. Please add files.';
+        log('WebP engine reinitialized OK', 'ok');
+      } catch (reinitErr) {
+        log(`WebP engine reinit failed: ${reinitErr?.message}`, 'error');
+        ffmpegReady = false;
+        status.textContent = 'WebP engine failed to restart.';
+        updateControls();
+      }
+    }
     throw err;
   }
   const reduction = file.size > 0 ? Math.max(0,(1-(out.blob.size/file.size))*100).toFixed(1) : '0.0';
