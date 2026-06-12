@@ -111,6 +111,10 @@ async function _binarySearchQuality(ffmpeg,file,settings,onProgress){
 }
 
 async function _convertImage(ffmpeg,file,settings,onProgress){
+  try { return await _doConvertImage(ffmpeg,file,settings,onProgress); }
+  catch(e) { _tagEngineDeadError(e); throw e; }
+}
+async function _doConvertImage(ffmpeg,file,settings,onProgress){
   const originalName = String(file?.name || 'image');
   const originalType = String(file?.type || '').toLowerCase();
   const isGifInput   = originalType === 'image/gif'  || /\.gif$/i.test(originalName);
@@ -131,13 +135,19 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
 
   log(`Loading: ${originalName} → ${outputFormat}`, 'info');
   const fileBytes = await ffmpeg.fetchFile(file);
-  // Scale timeout with file size: 20s base + 10s per MB, capped at 120s.
+  // Scale write timeout with file size: 20s base + 10s per MB, capped at 120s.
   const writeLimitMs = Math.min(120000, 20000 + Math.ceil(fileBytes.length / (1024 * 1024)) * 10000);
   const writeTimeoutErr = new Error(`ffmpeg writeFile timed out after ${writeLimitMs / 1000}s`);
   writeTimeoutErr.needsReinit = true;
-  const writeTimeout = new Promise((_, reject) =>
-    setTimeout(() => { try { ffmpeg.terminate?.(); } catch {} reject(writeTimeoutErr); }, writeLimitMs));
-  await Promise.race([ffmpeg.writeFile(inputFs, fileBytes), writeTimeout]);
+  let writeTimerHandle;
+  const writeTimeout = new Promise((_, reject) => {
+    writeTimerHandle = setTimeout(() => { try { ffmpeg.terminate?.(); } catch {} reject(writeTimeoutErr); }, writeLimitMs);
+  });
+  try {
+    await Promise.race([ffmpeg.writeFile(inputFs, fileBytes), writeTimeout]);
+  } finally {
+    clearTimeout(writeTimerHandle);
+  }
   const args=['-y','-threads','1'];
   if(isVideoInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));
   args.push('-i',inputFs,'-c:v', outputFormat === 'avif' ? 'libaom-av1' : 'libwebp');
@@ -177,14 +187,36 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
   const h=({progress})=>{ onProgress&&onProgress(smooth(progress)); };
   ffmpeg.on('progress',h);
-  const execTimeoutMs = isAnimatedInput ? 120000 : 30000;
-  const execTimeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error(`ffmpeg exec timed out after ${execTimeoutMs/1000}s`)),execTimeoutMs));
+  // Scale exec timeout: animated gets 2 min; stills get 30s + 5s/MB (capped 90s).
+  const execTimeoutMs = isAnimatedInput
+    ? 120000
+    : Math.min(90000, 30000 + Math.ceil(fileBytes.length / (1024 * 1024)) * 5000);
+  const execTimeoutErr = new Error(`ffmpeg exec timed out after ${execTimeoutMs/1000}s`);
+  execTimeoutErr.needsReinit = true;
+  let execTimerHandle;
+  const execTimeout = new Promise((_,reject) => {
+    execTimerHandle = setTimeout(() => { try { ffmpeg.terminate?.(); } catch {} reject(execTimeoutErr); }, execTimeoutMs);
+  });
   try{
     const ret = await Promise.race([ffmpeg.exec(args), execTimeout]);
     if(typeof ret === 'number' && ret !== 0) throw new Error(`ffmpeg exited with code ${ret}`);
-  } finally { try{ ffmpeg.off('progress',h);}catch{} }
+  } finally {
+    clearTimeout(execTimerHandle);
+    try{ ffmpeg.off('progress',h);}catch{}
+  }
   const data=await ffmpeg.readFile(outputFs);
   try{ await ffmpeg.deleteFile(inputFs);}catch{}
   try{ await ffmpeg.deleteFile(outputFs);}catch{}
   return {name:outputName, blob:new Blob([data.buffer],{type: outputFormat === 'avif' ? 'image/avif' : 'image/webp'})};
+}
+
+function _tagEngineDeadError(e) {
+  const msg = String(e?.message || '');
+  if (!e.needsReinit && (
+    msg.includes('called FFmpeg.terminate') ||
+    msg.includes('ffmpeg is not loaded') ||
+    msg.includes('not loaded, call')
+  )) {
+    e.needsReinit = true;
+  }
 }
