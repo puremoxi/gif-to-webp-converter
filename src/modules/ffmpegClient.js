@@ -129,7 +129,11 @@ async function _convertImage(ffmpeg,file,settings,onProgress){
   const inputFs = `in-${token}${inputExt}`;
   const outputFs = `out-${token}.${outputFormat}`;
 
-  await ffmpeg.writeFile(inputFs, await ffmpeg.fetchFile(file));
+  log(`Loading: ${originalName} → ${outputFormat}`, 'info');
+  const fileBytes = await ffmpeg.fetchFile(file);
+  const writeTimeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('ffmpeg writeFile timed out after 15s')), 15000));
+  await Promise.race([ffmpeg.writeFile(inputFs, fileBytes), writeTimeout]);
   const args=['-y','-threads','1'];
   if(isVideoInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));
   args.push('-i',inputFs,'-c:v', outputFormat === 'avif' ? 'libaom-av1' : 'libwebp');

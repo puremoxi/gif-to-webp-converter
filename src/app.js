@@ -1,10 +1,11 @@
 import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta } from './modules/ui.js';
 import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
 import { convertToAvif, hasAvifEngineFiles, initAvifEngine } from './modules/avifClient.js';
-import { log } from './modules/logger.js';
+import { log, logAlways } from './modules/logger.js';
 import { createConversionQueue } from './modules/queueManager.js';
 import { getMediaInfo } from './modules/mediaInfo.js';
 import { rasterizeSvg } from './modules/svgRasterizer.js';
+import { listPresets, savePreset, deletePreset, applyPreset, DEFAULT_PRESET } from './modules/presetsManager.js';
 
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
@@ -110,6 +111,83 @@ function removeFromQueue(id){
 status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
+
+async function initPresets() {
+  const select = document.getElementById('preset-select');
+  const saveBtn = document.getElementById('preset-save');
+  const deleteBtn = document.getElementById('preset-delete');
+  if (!select || !saveBtn || !deleteBtn) return;
+
+  let presets = [];
+
+  function syncDeleteBtn() {
+    const isDefault = select.value === '__default__';
+    deleteBtn.disabled = isDefault;
+    deleteBtn.style.color = isDefault ? '#64748b' : '#94a3b8';
+  }
+
+  async function refreshPresets(activeName) {
+    try { presets = await listPresets(); } catch { presets = []; }
+    select.innerHTML = '<option value="__default__">Default</option>';
+    for (const p of presets) {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    }
+    if (activeName) select.value = activeName;
+    syncDeleteBtn();
+  }
+
+  select.addEventListener('change', () => {
+    if (select.value === '__default__') {
+      applyPreset(DEFAULT_PRESET);
+    } else {
+      const p = presets.find(p => p.name === select.value);
+      if (p) applyPreset(p);
+    }
+    syncDeleteBtn();
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const currentName = select.value === '__default__' ? '' : select.value;
+    const name = window.prompt('Save preset as:', currentName || 'My Preset');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    if (trimmed.toLowerCase() === 'default') { alert('Cannot overwrite the Default preset.'); return; }
+    try {
+      logAlways(`Saving preset: "${trimmed}"`, 'info');
+      await savePreset(trimmed, getSettings());
+      logAlways(`Preset saved: "${trimmed}"`, 'ok');
+      await refreshPresets(trimmed);
+    } catch (e) {
+      const msg = e?.message || String(e);
+      logAlways(`Preset save failed: ${msg}`, 'error');
+      alert('Failed to save preset: ' + msg);
+    }
+  });
+
+  deleteBtn.addEventListener('click', async () => {
+    const name = select.value;
+    if (name === '__default__') return;
+    if (!confirm(`Delete preset "${name}"?`)) return;
+    try {
+      logAlways(`Deleting preset: "${name}"`, 'info');
+      await deletePreset(name);
+      logAlways(`Preset deleted: "${name}"`, 'ok');
+      await refreshPresets('__default__');
+      applyPreset(DEFAULT_PRESET);
+    } catch (e) {
+      const msg = e?.message || String(e);
+      logAlways(`Preset delete failed: ${msg}`, 'error');
+      alert('Failed to delete preset: ' + msg);
+    }
+  });
+
+  await refreshPresets();
+}
+
+initPresets().catch(() => {});
 function syncOutputFormatAvailability() {
   const select = document.getElementById('output-format');
   const avifOption = select?.querySelector('option[value="avif"]');
