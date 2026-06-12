@@ -116,7 +116,8 @@ async function initPresets() {
   const select = document.getElementById('preset-select');
   const saveBtn = document.getElementById('preset-save');
   const deleteBtn = document.getElementById('preset-delete');
-  if (!select || !saveBtn || !deleteBtn) return;
+  const resetBtn = document.getElementById('preset-reset');
+  if (!select || !saveBtn || !deleteBtn || !resetBtn) return;
 
   let presets = [];
 
@@ -182,6 +183,12 @@ async function initPresets() {
       logAlways(`Preset delete failed: ${msg}`, 'error');
       alert('Failed to delete preset: ' + msg);
     }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    select.value = '__default__';
+    syncDeleteBtn();
+    applyPreset(DEFAULT_PRESET);
   });
 
   await refreshPresets();

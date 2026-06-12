@@ -13,7 +13,74 @@
 const http          = require('http');
 const fs            = require('fs');
 const path          = require('path');
+const os            = require('os');
 const { exec }      = require('child_process');
+
+// ── Preset storage ────────────────────────────────────────────────────────────
+const PRESET_DIR = process.env.APPDATA
+  ? path.join(process.env.APPDATA, 'ShrinkRay', 'presets')
+  : path.join(os.homedir(), '.config', 'ShrinkRay', 'presets');
+
+try { fs.mkdirSync(PRESET_DIR, { recursive: true }); } catch (e) {
+  console.warn('  [presets] Could not create preset directory at startup:', e.message);
+}
+console.log('  [presets] Storage directory:', PRESET_DIR);
+
+function sanitizePresetName(name) {
+  return String(name || '').replace(/[^a-zA-Z0-9 _\-]/g, '').trim().slice(0, 64);
+}
+
+function handleGetPresets(res) {
+  try {
+    fs.mkdirSync(PRESET_DIR, { recursive: true });
+    const files = fs.readdirSync(PRESET_DIR).filter(f => f.endsWith('.json'));
+    const presets = files.map(f => {
+      try { return JSON.parse(fs.readFileSync(path.join(PRESET_DIR, f), 'utf8')); } catch { return null; }
+    }).filter(Boolean);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(presets));
+  } catch (e) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: e.message }));
+  }
+}
+
+function handleSavePreset(req, res) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const data = JSON.parse(body);
+      const name = sanitizePresetName(data.name);
+      if (!name) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid preset name — use letters, numbers, spaces, hyphens, or underscores' }));
+        return;
+      }
+      fs.mkdirSync(PRESET_DIR, { recursive: true });
+      const filePath = path.join(PRESET_DIR, name + '.json');
+      fs.writeFileSync(filePath, JSON.stringify({ ...data.settings, name }, null, 2), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, name }));
+    } catch (e) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+  });
+}
+
+function handleDeletePreset(name, res) {
+  try {
+    const safe = sanitizePresetName(name);
+    const filePath = path.join(PRESET_DIR, safe + '.json');
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (e) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: e.message }));
+  }
+}
 
 // ── Asset root ───────────────────────────────────────────────────────────────
 // In the pkg snapshot __dirname resolves to the virtual snapshot root,
@@ -86,6 +153,15 @@ function createHandler() {
     res.setHeader('Cross-Origin-Resource-Policy',  'same-origin');
 
     const urlPath = decodeURIComponent(req.url.split('?')[0]);
+
+    // ── Preset API routes ────────────────────────────────────────────────────
+    if (urlPath === '/api/presets' && req.method === 'GET')  { handleGetPresets(res); return; }
+    if (urlPath === '/api/presets' && req.method === 'POST') { handleSavePreset(req, res); return; }
+    if (urlPath.startsWith('/api/presets/') && req.method === 'DELETE') {
+      handleDeletePreset(decodeURIComponent(urlPath.slice('/api/presets/'.length)), res);
+      return;
+    }
+
     let   relPath = urlPath.replace(/^\/+/, '');
     if (!relPath) relPath = 'index.html';
     if (urlPath === '/favicon.ico') relPath = 'icons/favicon.ico';
