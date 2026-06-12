@@ -77,7 +77,7 @@ That's it. No installation, no Node.js required.
 ## 🆕 Features --> v5.1
 
 - Basic Features
-  - Converts GIF, PNG, JPG/JPEG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, HEIC, HEIF, MP4, MOV, and WebM files to WebP or AVIF.
+  - Converts GIF, PNG, JPG/JPEG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, **HEIC, HEIF**, MP4, MOV, and WebM files to WebP or AVIF.
   - SVG files are automatically rasterized to PNG before conversion.
   - Video files (MP4, MOV, WebM) are converted to animated WebP, or still WebP/AVIF from the first frame.
   - Batch conversions (multiple files simultaneously)
@@ -254,6 +254,7 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 #### Expanded Input Formats
 - Added support for BMP, TIFF, APNG, ICO, TGA, and SVG still image formats.
 - Added support for MP4, MOV, and WebM video formats — converted to animated WebP, or still WebP/AVIF from the first frame.
+- Added support for **HEIC and HEIF** (the default photo format on iPhone and modern Apple devices), powered by the `@discourse/heic` WASM decoder. HEIC/HEIF inputs are decoded to PNG first, then converted through the standard WebP or AVIF pipeline.
 - SVG files are automatically rasterized to PNG internally before being passed to the conversion engine.
 - Video files display a thumbnail extracted from the first frame in the Queue card.
 - Non-decodable formats (formats the browser cannot natively render) display a styled placeholder tile showing the file extension.

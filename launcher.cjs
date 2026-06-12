@@ -133,6 +133,8 @@ const MIME = {
   '.jpeg': 'image/jpeg',
   '.svg':  'image/svg+xml',
   '.ico':  'image/x-icon',
+  '.heic': 'image/heic',
+  '.heif': 'image/heif',
   '.map':  'application/json; charset=utf-8',
   '.txt':  'text/plain; charset=utf-8',
 };
