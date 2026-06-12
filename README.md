@@ -12,7 +12,7 @@ All processing is performed locally — no files are uploaded.
   - [What is AVIF?](#what-is-avif)
   - [What is FFmpeg?](#what-is-ffmpeg)
 - [Usage](#usage)
-  - [Quick Start — Option 01 (Windows / PowerShell)](#quick-start-option-01)
+  - [Quick Start (Windows / PowerShell)](#quick-start-option-01)
 - [Features v5.1](#features)
 - [How It Works v5.1](#how-it-works)
 - [ChangeLog v5.1](#changelog)
@@ -23,6 +23,8 @@ All processing is performed locally — no files are uploaded.
 <a id="about"></a>
 
 ## About This Application
+
+Shrink Ray is a tool for compressing still images and video files into modern, web-optimized formats so they load faster and display more efficiently online. It runs entirely in your browser — no files are uploaded to any server.
 
 <a id="what-is-webp"></a>
 
@@ -56,11 +58,16 @@ FFmpeg is a powerful, free, and open-source software project capable of handling
 
 <a id="quick-start-option-01"></a>
 
-## Quick Start - Option 01 (Windows / PowerShell)
+## Quick Start (Windows / PowerShell)
 
 Use this option when you are running the tool from a Windows-based project folder or from a Windows-use copy of the repository.
 
 1. Download or clone the repository.
+
+   ```powershell
+   git clone https://github.com/puremoxi/gif-to-webp-converter.git
+   ```
+
 2. Navigate to the root directory of the repository (`gif-to-webp-converter`).
 
 ```powershell
