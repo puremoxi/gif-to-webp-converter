@@ -183,8 +183,20 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     args.push('-crf', String(Math.max(0, Math.min(63, crf))));
     if(Number.isFinite(settings.compressionLevel)) args.push('-cpu-used', String(Math.max(0, Math.min(8, 8 - Number(settings.compressionLevel)))));
   } else {
-    if(Number.isFinite(settings.compressionLevel)) args.push('-compression_level',String(settings.compressionLevel));
-    if(settings.lossless) args.push('-lossless','1'); else args.push('-q:v',String(settings.quality));
+    if(Number.isFinite(settings.compressionLevel)) {
+      const rawLevel = Number(settings.compressionLevel);
+      // Fast Mode: use compression level 2 for maximum speed.
+      // Safety cap: level 5-6 is brute-force in libwebp — exponentially slow in WASM.
+      const effectiveLevel = settings.fastMode ? 2 : Math.min(rawLevel, 4);
+      if (settings.fastMode) {
+        log(`Fast Mode: compression_level=2, quality capped at 80`, 'info');
+      } else if (rawLevel > 4) {
+        log(`compression_level capped at 4 (requested ${rawLevel}; level 5-6 is impractically slow in WASM)`, 'warn');
+      }
+      args.push('-compression_level', String(effectiveLevel));
+    }
+    const effectiveQuality = settings.fastMode ? Math.min(Number(settings.quality) || 90, 80) : settings.quality;
+    if(settings.lossless) args.push('-lossless','1'); else args.push('-q:v',String(effectiveQuality));
   }
   if(shouldStillEncode){
     args.push('-frames:v','1');
@@ -200,6 +212,22 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   const ffLog = ({ message }) => { if (message) ffLines.push(String(message)); };
   ffmpeg.on('progress',h);
   ffmpeg.on('log', ffLog);
+
+  // For still images FFmpeg never fires progress events until the frame is done.
+  // Drive the progress bar with elapsed-time estimates and log periodic heartbeats.
+  let progressInterval = null;
+  if (shouldStillEncode && onProgress) {
+    const execStart = Date.now();
+    progressInterval = setInterval(() => {
+      const elapsedMs = Date.now() - execStart;
+      const elapsedS  = Math.round(elapsedMs / 1000);
+      // Ramp to 90% over the first 70% of the timeout window.
+      onProgress(Math.min(0.90, elapsedMs / (execTimeoutMs * 0.70)));
+      if (elapsedS > 0 && elapsedS % 10 === 0) {
+        log(`Still encoding… ${elapsedS}s elapsed (limit ${execTimeoutMs/1000}s)`, 'info');
+      }
+    }, 1000);
+  }
   const execTimeoutErr = new Error(`ffmpeg exec timed out after ${execTimeoutMs/1000}s`);
   execTimeoutErr.needsReinit = true;
   let execTimerHandle;
@@ -222,6 +250,7 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     throw execErr;
   } finally {
     clearTimeout(execTimerHandle);
+    if (progressInterval) clearInterval(progressInterval);
     try{ ffmpeg.off('progress',h);}catch{}
     try{ ffmpeg.off('log', ffLog);}catch{}
   }

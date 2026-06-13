@@ -6,6 +6,7 @@ export const DEFAULT_PRESET = {
   compressionLevel: 6,
   loop: true,
   keepAlpha: false,
+  fastMode: false,
   lossless: false,
   mixed: false,
   maxWidthEnabled: true,
@@ -83,6 +84,7 @@ export function applyPreset(settings) {
   setCheckbox('mixed-toggle', settings.mixed ?? false, true);
   setCheckbox('loop-toggle', settings.loop ?? true);
   setCheckbox('keep-alpha-toggle', settings.keepAlpha ?? false);
+  setCheckbox('fast-mode-toggle',  settings.fastMode  ?? false);
 
   // Dimensions — ncd must change before dependent toggles
   setCheckbox('no-change-dimensions-toggle', settings.noChangeDimensions ?? false, true);

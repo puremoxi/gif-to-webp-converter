@@ -225,6 +225,7 @@ function getSettings(){
     compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
     loop: document.getElementById('loop-toggle').checked,
     keepAlpha: document.getElementById('keep-alpha-toggle')?.checked ?? false,
+    fastMode:  document.getElementById('fast-mode-toggle')?.checked ?? false,
     lossless: document.getElementById('lossless-toggle').checked,
     mixed: document.getElementById('mixed-toggle').checked,
     maxWidthEnabled,
