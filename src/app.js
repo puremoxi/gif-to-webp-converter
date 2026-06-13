@@ -1,5 +1,5 @@
 import { setupUI, setPlaceholderThumbnail, setItemThumbnail, setItemMeta } from './modules/ui.js';
-import { initFFmpeg, convertToWebP } from './modules/ffmpegClient.js';
+import { initFFmpeg, convertToWebP, decodeToPng } from './modules/ffmpegClient.js';
 import { convertToAvif, hasAvifEngineFiles, initAvifEngine } from './modules/avifClient.js';
 import { log, logAlways } from './modules/logger.js';
 import { createConversionQueue } from './modules/queueManager.js';
@@ -325,6 +325,17 @@ const queue=createConversionQueue(async (file,ctx)=> {
   } else if (isHeicFile(file)) {
     const pngBlob = await decodeHeicToBlob(file);
     convFile = new File([pngBlob], file.name.replace(/\.heic$/i, '.png').replace(/\.heif$/i, '.png'), { type: 'image/png' });
+  }
+  // TGA and TIFF are not natively decodable by browsers (createImageBitmap fails),
+  // so pre-decode to PNG via FFmpeg when the AVIF encoder will need them.
+  const needsFfmpegPreDecode = ctx.settings.outputFormat === 'avif' &&
+    (/\.(tiff?|tga|targa)$/i.test(convFile.name) || /^image\/(tiff|x-tiff|x-tga|x-targa)$/i.test(convFile.type));
+  if (needsFfmpegPreDecode) {
+    log(`Pre-decoding ${convFile.name} to PNG for AVIF encoder…`, 'info');
+    if (!webpFfmpeg) webpFfmpeg = await initFFmpeg({ base: WEBP_CORE_BASE, label: 'WebP engine' });
+    const engine = webpFfmpeg;
+    const pngBlob = await decodeToPng(engine, convFile);
+    convFile = new File([pngBlob], convFile.name.replace(/\.[^.]+$/i, '.png'), { type: 'image/png' });
   }
   let out;
   try {

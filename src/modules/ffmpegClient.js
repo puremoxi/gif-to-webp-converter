@@ -312,3 +312,23 @@ function _tagEngineDeadError(e) {
     e.needsReinit = true;
   }
 }
+
+export async function decodeToPng(ffmpeg, file) {
+  const originalName = String(file?.name || 'image');
+  const extMatch = originalName.match(/(\.[^.]+)$/i);
+  const inputExt = extMatch ? extMatch[1] : '.bin';
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const inputFs = `pre-${token}${inputExt}`;
+  const outputFs = `pre-${token}.png`;
+  try {
+    const fileBytes = await ffmpeg.fetchFile(file);
+    await ffmpeg.writeFile(inputFs, fileBytes);
+    const ret = await ffmpeg.exec(['-y', '-threads', '1', '-i', inputFs, '-frames:v', '1', outputFs]);
+    if (typeof ret === 'number' && ret !== 0) throw new Error(`FFmpeg could not decode ${originalName} (exit ${ret})`);
+    const data = await ffmpeg.readFile(outputFs);
+    return new Blob([data.buffer], { type: 'image/png' });
+  } finally {
+    try { await ffmpeg.deleteFile(inputFs); } catch {}
+    try { await ffmpeg.deleteFile(outputFs); } catch {}
+  }
+}
