@@ -7,6 +7,8 @@ export const DEFAULT_PRESET = {
   loop: true,
   keepAlpha: false,
   fastMode: false,
+  overrideCompressionCap: false,
+  execTimeoutSec: 0,
   lossless: false,
   mixed: false,
   maxWidthEnabled: true,
@@ -83,8 +85,11 @@ export function applyPreset(settings) {
   setCheckbox('lossless-toggle', settings.lossless ?? false, true);
   setCheckbox('mixed-toggle', settings.mixed ?? false, true);
   setCheckbox('loop-toggle', settings.loop ?? true);
-  setCheckbox('keep-alpha-toggle', settings.keepAlpha ?? false);
-  setCheckbox('fast-mode-toggle',  settings.fastMode  ?? false);
+  setCheckbox('keep-alpha-toggle',        settings.keepAlpha           ?? false);
+  setCheckbox('fast-mode-toggle',         settings.fastMode            ?? false);
+  setCheckbox('override-compression-cap', settings.overrideCompressionCap ?? false);
+  const timeoutEl = document.getElementById('exec-timeout-sec');
+  if (timeoutEl) timeoutEl.value = String(settings.execTimeoutSec ?? 0);
 
   // Dimensions — ncd must change before dependent toggles
   setCheckbox('no-change-dimensions-toggle', settings.noChangeDimensions ?? false, true);

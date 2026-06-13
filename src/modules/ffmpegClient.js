@@ -138,10 +138,16 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   const fileSizeBytes = file.size || 0;
   const fileMB = fileSizeBytes / (1024 * 1024);
   const writeLimitMs = Math.min(120000, 20000 + Math.ceil(fileMB) * 10000);
-  // Scale exec timeout: animated 2 min; stills 90s base + 15s/MB, capped at 5 min.
-  const execTimeoutMs = isAnimatedInput
-    ? 300000
-    : Math.min(300000, 90000 + Math.ceil(fileMB) * 15000);
+  // Scale exec timeout: animated 5 min; stills 90s base + 15s/MB, capped at 5 min.
+  // User override (execTimeoutSec > 0) bypasses the formula entirely.
+  const execTimeoutMs = settings.execTimeoutSec > 0
+    ? settings.execTimeoutSec * 1000
+    : isAnimatedInput
+      ? 300000
+      : Math.min(300000, 90000 + Math.ceil(fileMB) * 15000);
+  if (settings.execTimeoutSec > 0) {
+    log(`Timeout override: ${settings.execTimeoutSec}s (manual)`, 'info');
+  }
 
   log(`Loading: ${originalName} → ${outputFormat}  (${(fileSizeBytes/1024).toFixed(1)} KB  |  write≤${writeLimitMs/1000}s  exec≤${execTimeoutMs/1000}s)`, 'info');
   const fileBytes = await ffmpeg.fetchFile(file);
@@ -185,13 +191,22 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   } else {
     if(Number.isFinite(settings.compressionLevel)) {
       const rawLevel = Number(settings.compressionLevel);
-      // Fast Mode: use compression level 2 for maximum speed.
-      // Safety cap: level 5-6 is brute-force in libwebp — exponentially slow in WASM.
-      const effectiveLevel = settings.fastMode ? 2 : Math.min(rawLevel, 4);
+      // Fast Mode forces level 2. Override cap respects user's full slider value.
+      // Default safety cap is 3 — levels 4-6 are exponentially slower in WASM.
+      let effectiveLevel;
       if (settings.fastMode) {
+        effectiveLevel = 2;
         log(`Fast Mode: compression_level=2, quality capped at 80`, 'info');
-      } else if (rawLevel > 4) {
-        log(`compression_level capped at 4 (requested ${rawLevel}; level 5-6 is impractically slow in WASM)`, 'warn');
+      } else if (settings.overrideCompressionCap) {
+        effectiveLevel = rawLevel;
+        if (rawLevel > 3) {
+          log(`Override cap: compression_level=${rawLevel} (warning: levels 4–6 may be very slow in WASM)`, 'warn');
+        }
+      } else {
+        effectiveLevel = Math.min(rawLevel, 3);
+        if (rawLevel > 3) {
+          log(`compression_level capped at 3 (requested ${rawLevel}; levels 4–6 impractically slow in WASM — enable Override cap to use full value)`, 'warn');
+        }
       }
       args.push('-compression_level', String(effectiveLevel));
     }
@@ -221,8 +236,17 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     progressInterval = setInterval(() => {
       const elapsedMs = Date.now() - execStart;
       const elapsedS  = Math.round(elapsedMs / 1000);
-      // Ramp to 90% over the first 70% of the timeout window.
-      onProgress(Math.min(0.90, elapsedMs / (execTimeoutMs * 0.70)));
+      // Phase 1 (0–70% of timeout): ramp 0%→90%.
+      // Phase 2 (70–100% of timeout): crawl 90%→98% so bar never freezes.
+      const phase1ratio = elapsedMs / (execTimeoutMs * 0.70);
+      let progressVal;
+      if (phase1ratio <= 1.0) {
+        progressVal = phase1ratio * 0.90;
+      } else {
+        const phase2ratio = (elapsedMs - execTimeoutMs * 0.70) / (execTimeoutMs * 0.30);
+        progressVal = 0.90 + Math.min(0.08, phase2ratio * 0.08);
+      }
+      onProgress(Math.min(0.98, progressVal));
       if (elapsedS > 0 && elapsedS % 10 === 0) {
         log(`Still encoding… ${elapsedS}s elapsed (limit ${execTimeoutMs/1000}s)`, 'info');
       }

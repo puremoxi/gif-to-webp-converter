@@ -226,6 +226,8 @@ function getSettings(){
     loop: document.getElementById('loop-toggle').checked,
     keepAlpha: document.getElementById('keep-alpha-toggle')?.checked ?? false,
     fastMode:  document.getElementById('fast-mode-toggle')?.checked ?? false,
+    overrideCompressionCap: document.getElementById('override-compression-cap')?.checked ?? false,
+    execTimeoutSec: parseInt(document.getElementById('exec-timeout-sec')?.value, 10) || 0,
     lossless: document.getElementById('lossless-toggle').checked,
     mixed: document.getElementById('mixed-toggle').checked,
     maxWidthEnabled,
@@ -252,6 +254,23 @@ function updateControls(){
   [startBtn, clearBtn, zipBtn].forEach(syncActionButtonColor);
 }
 syncOutputFormatAvailability();
+
+let skipCurrentRequested = false;
+const skipBtn = document.getElementById('skip-button');
+function showSkipButton(visible) {
+  if (!skipBtn) return;
+  skipBtn.hidden = !visible;
+  skipBtn.disabled = !visible;
+  if (visible) { skipBtn.style.color = '#d97706'; skipBtn.style.borderColor = '#b45309'; }
+  if (!visible) { skipCurrentRequested = false; }
+}
+skipBtn?.addEventListener('click', () => {
+  if (skipCurrentRequested) return;
+  skipCurrentRequested = true;
+  log('Skip requested — aborting current conversion…', 'warn');
+  webpFfmpeg?.terminate?.();
+});
+
 async function getEngineForSettings(settings) {
   if (settings.outputFormat !== 'avif') return webpFfmpeg;
   if (!avifEngineAvailable) {
@@ -325,9 +344,16 @@ const queue=createConversionQueue(async (file,ctx)=> {
       out = await convertToWebP(engine,convFile,ctx.settings,ctx.onProgress);
     }
   } catch(err) {
-    log(`Error: ${file.name} — ${err?.message || err}`, 'error');
+    const wasSkip = skipCurrentRequested;
+    skipCurrentRequested = false;
+    if (wasSkip) {
+      err.wasSkipped = true;
+      log(`Skipped: ${file.name}`, 'warn');
+    } else {
+      log(`Error: ${file.name} — ${err?.message || err}`, 'error');
+    }
     if (err?.needsReinit) {
-      log('WebP engine terminated after timeout — reinitializing for next file…', 'warn');
+      log(`WebP engine ${wasSkip ? 'restarting after skip' : 'terminated after timeout'} — reinitializing for next file…`, 'warn');
       status.textContent = 'Restarting WebP engine…';
       try {
         webpFfmpeg = await initFFmpeg({ base: WEBP_CORE_BASE, label: 'WebP engine' });
@@ -503,9 +529,11 @@ startBtn.addEventListener('click', async ()=>{
     s.mixed ? 'mixed' : null,
   ].filter(Boolean);
   log(`--- Batch start: ${queued} file(s)  [${flags.join('  ')}] ---`, 'info');
+  showSkipButton(true);
   try {
     await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
   } finally {
+    showSkipButton(false);
     updateControls();
   }
 });

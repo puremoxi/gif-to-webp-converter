@@ -1,4 +1,4 @@
-import { addQueuedItem, updateItemProgress, setItemConverted, setItemError } from './ui.js';
+import { addQueuedItem, updateItemProgress, setItemConverted, setItemError, setItemSkipped } from './ui.js';
 export function createConversionQueue(proc){
   const q=[];
   const ACCEPTED_TYPES = new Set([
@@ -31,7 +31,7 @@ export function createConversionQueue(proc){
         try{
           const out=await proc(it.file,{id:it.id,onProgress:r=>updateItemProgress(it.id,r),settings:getSettings()});
           if(out?.blob){ setItemConverted(it.id,out.blob,out.name); onDone&&onDone({id:it.id,name:out.name,blob:out.blob}); }
-        }catch(e){ console.error(e); setItemError(it.id,'Conversion failed'); }
+        }catch(e){ console.error(e); if(e?.wasSkipped){ setItemSkipped(it.id); } else { setItemError(it.id,'Conversion failed'); } }
       }
     },
     remove(id){

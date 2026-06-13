@@ -295,6 +295,11 @@ export function setItemError(id,msg){
   const s=document.getElementById('status-'+id);
   if(s){ s.textContent=msg||'Error'; s.classList.remove('text-blue-400','text-amber-400'); s.classList.add('text-red-500'); }
 }
+export function setItemSkipped(id){
+  const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id);
+  if(b) b.style.width='0%';
+  if(s){ s.textContent='Skipped'; s.style.color='#64748b'; }
+}
 export const bannerCtl = {
   show(){ document.getElementById('ffmpeg-banner')?.classList.remove('hidden'); },
   hide(){ document.getElementById('ffmpeg-banner')?.classList.add('hidden'); },
