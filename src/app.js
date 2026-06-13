@@ -256,15 +256,7 @@ function updateControls(){
 syncOutputFormatAvailability();
 
 let skipCurrentRequested = false;
-const skipBtn = document.getElementById('skip-button');
-function showSkipButton(visible) {
-  if (!skipBtn) return;
-  skipBtn.hidden = !visible;
-  skipBtn.disabled = !visible;
-  if (visible) { skipBtn.style.color = '#d97706'; skipBtn.style.borderColor = '#b45309'; }
-  if (!visible) { skipCurrentRequested = false; }
-}
-skipBtn?.addEventListener('click', () => {
+document.addEventListener('shrinkray:skip', () => {
   if (skipCurrentRequested) return;
   skipCurrentRequested = true;
   log('Skip requested — aborting current conversion…', 'warn');
@@ -529,11 +521,10 @@ startBtn.addEventListener('click', async ()=>{
     s.mixed ? 'mixed' : null,
   ].filter(Boolean);
   log(`--- Batch start: ${queued} file(s)  [${flags.join('  ')}] ---`, 'info');
-  showSkipButton(true);
   try {
     await queue.run(()=>getSettings(), ()=>{ if (window.UIExt?.markBatchOneDone) window.UIExt.markBatchOneDone(); });
   } finally {
-    showSkipButton(false);
+    skipCurrentRequested = false;
     updateControls();
   }
 });

@@ -252,7 +252,7 @@ export function updateItemProgress(id,ratio){
     btn.type='button'; btn.className='item-skip-btn'; btn.textContent='Skip';
     btn.title='Skip this file and continue with next';
     btn.style.cssText='height:17.5px;padding:0 8px;border-radius:5px;background:#1e293b;border:1px solid #475569;color:#78716c;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;vertical-align:middle;line-height:1;';
-    btn.addEventListener('click', ()=>{ document.getElementById('skip-button')?.click(); });
+    btn.addEventListener('click', ()=>{ document.dispatchEvent(new CustomEvent('shrinkray:skip')); });
     a.prepend(btn);
   }
 }

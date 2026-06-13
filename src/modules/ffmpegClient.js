@@ -180,9 +180,6 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     vfFilter = `scale=-2:${hCap}:force_original_aspect_ratio=decrease`;
   }
   if(vfFilter) args.push('-vf', vfFilter);
-  // Strip alpha by telling libwebp not to encode it — avoids the slow format=rgb24
-  // filter path that bypasses WASM SIMD optimisations in the libwebp encoder.
-  if(!settings.keepAlpha && outputFormat === 'webp') args.push('-alpha_q', '0');
 
   if(outputFormat === 'avif'){
     const crf = Math.round(63 - ((Number(settings.quality) || 90) * 0.63));
@@ -230,14 +227,26 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   }
   log('ffmpeg ' + args.join(' '), 'cmd');
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
-  const h=({progress})=>{ onProgress&&onProgress(smooth(progress)); };
   const ffLines = [];
   const ffLog = ({ message }) => { if (message) ffLines.push(String(message)); };
-  ffmpeg.on('progress',h);
   ffmpeg.on('log', ffLog);
 
-  // FFmpeg progress events are unreliable for animated WebP output in WASM — run a
-  // time-based ticker for all formats so the bar always moves regardless.
+  // Single monotonic progress gate — bar never moves backward regardless of source.
+  // FFmpeg native events and the time-based ticker both feed through here; whichever
+  // reports a higher value wins, the other is silently ignored.
+  let _lastProgress = 0;
+  const advance = (val) => {
+    if (!onProgress || val <= _lastProgress) return;
+    _lastProgress = val;
+    onProgress(val);
+  };
+
+  // FFmpeg native progress events (reliable for video, silent for stills).
+  const h = ({ progress }) => { advance(smooth(progress)); };
+  ffmpeg.on('progress', h);
+
+  // Time-based ticker: guarantees the bar moves even when FFmpeg emits no events
+  // (stills) and acts as a floor for animated so it never appears stuck.
   let progressInterval = null;
   if (onProgress) {
     const execStart = Date.now();
@@ -255,7 +264,7 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
         const phase2ratio = (elapsedMs - execTimeoutMs * 0.70) / (execTimeoutMs * 0.30);
         progressVal = 0.90 + Math.min(0.08, phase2ratio * 0.08);
       }
-      onProgress(Math.min(0.98, progressVal));
+      advance(Math.min(0.98, progressVal));
       if (elapsedS > 0 && elapsedS % 10 === 0) {
         log(`${label} encoding… ${elapsedS}s elapsed (limit ${execTimeoutMs/1000}s)`, 'info');
       }
