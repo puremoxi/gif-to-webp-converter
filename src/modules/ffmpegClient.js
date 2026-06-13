@@ -179,10 +179,10 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   } else if(hCap){
     vfFilter = `scale=-2:${hCap}:force_original_aspect_ratio=decrease`;
   }
-  if(!settings.keepAlpha){
-    vfFilter = vfFilter ? `${vfFilter},format=rgb24` : 'format=rgb24';
-  }
   if(vfFilter) args.push('-vf', vfFilter);
+  // Strip alpha by telling libwebp not to encode it — avoids the slow format=rgb24
+  // filter path that bypasses WASM SIMD optimisations in the libwebp encoder.
+  if(!settings.keepAlpha && outputFormat === 'webp') args.push('-alpha_q', '0');
 
   if(outputFormat === 'avif'){
     const crf = Math.round(63 - ((Number(settings.quality) || 90) * 0.63));
@@ -215,6 +215,7 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   }
   if(shouldStillEncode){
     args.push('-frames:v','1');
+    if(outputFormat === 'webp') args.push('-preset','picture');
   } else {
     if(isVideoInput){
       args.push('-an');  // WebP has no audio — drop all audio streams to avoid mux error
