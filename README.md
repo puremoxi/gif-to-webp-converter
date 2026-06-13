@@ -1,6 +1,6 @@
 <img src="icons/app-icon.png" alt="Shrink Ray" width="48" align="left" style="margin-right:12px">
 
-# Shrink Ray v5.1
+# Shrink Ray v5.2
 
 A self-contained browser-based image and video converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
@@ -15,9 +15,9 @@ All processing is performed locally — no files are uploaded.
   - [What is FFmpeg?](#what-is-ffmpeg)
 - [Usage](#usage)
   - [Quick Start (Windows / PowerShell)](#quick-start-option-01)
-- [Features v5.1](#features)
-- [How It Works v5.1](#how-it-works)
-- [ChangeLog v5.1](#changelog)
+- [Features v5.2](#features)
+- [How It Works v5.2](#how-it-works)
+- [ChangeLog v5.2](#changelog)
 - [License](#license)
 
 ---
@@ -74,7 +74,7 @@ That's it. No installation, no Node.js required.
 
 <a id="features"></a>
 
-## 🆕 Features --> v5.1
+## 🆕 Features --> v5.2
 
 - Basic Features
   - Converts GIF, PNG, JPG/JPEG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, **HEIC, HEIF**, MP4, MOV, and WebM files to WebP or AVIF.
@@ -107,6 +107,9 @@ That's it. No installation, no Node.js required.
 - Settings — Quality & Compression
   - Quality (0–100), mapped to WebP qscale or AVIF CRF as appropriate.
   - Compression Level (0–6)
+  - **Fast Mode**: caps compression level at 2 and quality at 80 for faster encoding.
+  - **Override Compression Level Cap**: bypasses the default cap of 3 to allow levels 4–6 (slower but smaller). Has no effect when Fast Mode is on.
+  - **Conversion Timeout (sec)**: manual override for the per-file encoding time limit. 0 = automatic scaling (default). Range: 0–600 s.
 - Settings — Animation & Mode
   - Loop Animation (WebP only; disabled for AVIF)
   - Lossless Compression (WebP only; disabled for AVIF)
@@ -127,6 +130,8 @@ That's it. No installation, no Node.js required.
   - **Reset** button restores all settings to factory defaults and snaps the dropdown back to Default.
   - Presets are stored as individual JSON files on the user's machine at `%APPDATA%\ShrinkRay\presets\` (Windows) or `~/.config/ShrinkRay/presets/` (Mac/Linux).
   - Preset operations (save, delete, errors) are always logged to the Diagnostics panel.
+- Queue
+  - **Skip** button appears on the active queue card during conversion, allowing you to abort the current file and continue with the next.
 - UI and Usability
   - Preset bar at the top of the Settings panel: dropdown, Save As, Delete, Reset.
   - Editable numeric value fields next to sliders; typed values update sliders dynamically.
@@ -149,7 +154,7 @@ That's it. No installation, no Node.js required.
 
 <a id="how-it-works"></a>
 
-## 🆕 How it works --> v5.1
+## 🆕 How it works --> v5.2
 
 **1. Open the app — the interface loads ready to accept files.**
 
@@ -221,6 +226,9 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 | **File Output** | File Format | Choose **WebP** (default, best compatibility) or **AVIF** (often smaller for still images). WebP-only options (Lossless, Mixed, Loop) are disabled when AVIF is selected. |
 | **Quality & Compression** | Quality (0–100) | Controls lossy compression strength. Higher values preserve more detail at larger file sizes. Maps to WebP `qscale` or AVIF `CRF`. Default: 90. |
 | **Quality & Compression** | Compression Level (0–6) | Controls the encoding effort. Higher values produce smaller files but take longer. Default: 6. |
+| **Quality & Compression** | Fast Mode | Caps compression level at 2 and quality at 80. Significantly faster encoding; useful for previewing or batch-processing large queues. |
+| **Quality & Compression** | Override Compression Level Cap | When on, allows compression levels 4–6 (which can be slow in WebAssembly). Disabled automatically when Fast Mode is on. |
+| **Quality & Compression** | Conversion Timeout (sec) | Sets a manual time limit for each file's encoding step. 0 = automatic (90 s base + 15 s/MB for stills, 5 min for animated). Use this if a specific file consistently times out at the automatic limit. |
 | **Animation & Mode** | Loop Animation | When on, animated WebP outputs loop continuously. WebP only. |
 | **Animation & Mode** | Lossless Compression | Encodes the output losslessly (no quality loss, larger file). WebP only. |
 | **Animation & Mode** | Mixed Compression | Allows the encoder to mix lossy and lossless frames per-frame for animated outputs. WebP only. |
@@ -236,11 +244,46 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 
 <a id="changelog"></a>
 
-## 🆕 ChangeLog --> v5.1
+## 🆕 ChangeLog --> v5.2
+
+### Changes in v5.2 (June 2026)
+
+#### New Controls
+
+- Added **Conversion Timeout** slider (0–600 s) in the Settings panel below the Max File Size control. Setting it to 0 (default) keeps the automatic scaling formula (90 s base + 15 s/MB for stills, 5 min for animated). A manual value overrides the formula entirely for every file in the queue.
+- Added **Override Compression Level Cap** toggle. By default the compression level is capped at 3 to prevent multi-minute encode times in WebAssembly. When this toggle is on, levels 4–6 are allowed. The toggle has no effect when Fast Mode is on.
+- Both new settings are included in presets (saved and restored automatically).
+
+#### Queue — Skip Current
+
+- A **Skip** squircle button now appears on the active queue card as soon as a file begins converting. Clicking it aborts the current file and continues with the next one. The card status updates to **Skipped**.
+
+#### Progress Bar Fixes
+
+- Progress bar can no longer move backward. A monotonic gate ensures that FFmpeg native progress events and the time-based ticker never fight each other, eliminating the bar bouncing seen on video conversions.
+- Progress bar no longer stalls at 90%. The two-phase ramp now continues past 90% up to 98% during the final 30% of the timeout window, so the bar always visibly moves until the conversion finishes.
+
+#### Video Conversion Fixes
+
+- Fixed animated WebP output from video inputs always failing. Two bugs: `-loop -1` is not a valid libwebp loop value (fixed to `-loop 1` for no-loop, `-loop 0` for infinite); `-an` was missing, causing FFmpeg to error when trying to mux audio into the WebP container.
+- Fixed progress bar bouncing on video files caused by both FFmpeg native progress events and the time-based ticker firing simultaneously.
+
+#### Performance Restoration
+
+- Removed `format=rgb24` from the FFmpeg filter chain. This filter, added for alpha stripping, bypassed the WASM SIMD-optimised encoding path in libwebp, causing catastrophic slowdowns (seconds → timeout) for PNG, JPG, and other common formats. Alpha stripping is temporarily disabled rather than penalise all conversions.
+- Restored `-preset picture` for still WebP encoding. This flag enables a fast internal encoding pipeline in libwebp that is critical for acceptable WASM performance. It had been incorrectly blamed for an unrelated slowdown and removed in a previous session.
+
+#### TGA and TIFF — AVIF Fix
+
+- TGA and TIFF files routed to the AVIF encoder previously failed immediately with "The source image could not be decoded." The AVIF engine uses `createImageBitmap()`, a browser API that cannot decode TGA or TIFF natively. Fixed: these formats are now pre-decoded to PNG via FFmpeg before being passed to the AVIF encoder, matching the pattern used for HEIC/HEIF inputs.
+- Added `.tif`, `.tiff`, and `.tga` file-extension hints to the file input `accept` attribute for better compatibility with the Windows file picker.
+
+---
 
 ### Changes in v5.1 (June 2026)
 
 #### Presets
+
 - Added a **Preset bar** at the top of the Settings panel containing four controls: a dropdown, **Save As**, **Delete**, and **Reset**.
 - Users can save any combination of settings as a named preset via **Save As** (prompts for a name).
 - Selecting a preset from the dropdown immediately applies all saved settings to the UI.
@@ -252,6 +295,7 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 - Preset save errors now include the underlying server-side error message (e.g., filesystem error detail) rather than a generic failure string.
 
 #### Expanded Input Formats
+
 - Added support for BMP, TIFF, APNG, ICO, TGA, and SVG still image formats.
 - Added support for MP4, MOV, and WebM video formats — converted to animated WebP, or still WebP/AVIF from the first frame.
 - Added support for **HEIC and HEIF** (the default photo format on iPhone and modern Apple devices), powered by the `@discourse/heic` WASM decoder. HEIC/HEIF inputs are decoded to PNG first, then converted through the standard WebP or AVIF pipeline.
@@ -259,16 +303,19 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 - Video files display a thumbnail extracted from the first frame in the Queue card.
 - Non-decodable formats (formats the browser cannot natively render) display a styled placeholder tile showing the file extension.
 
-#### New Settings Controls
+#### Settings Additions (v5.1)
+
 - Added **Keep Alpha Channel** toggle: when off (default), transparency is stripped for smaller output files; when on, transparency is preserved in the WebP or AVIF output.
 - Added **Max FPS** slider (Animated Output section): caps the output frame rate for animated inputs. Lower values meaningfully reduce file size for GIFs and video.
 - Added **Max Duration (sec)** slider (Animated Output section): trims animated output to a maximum number of seconds. Applies to video, GIF, and APNG.
 
 #### Media Info
+
 - Replaced the GIF-only metadata reader with a unified `mediaInfo.js` module that extracts resolution, FPS, frame count, and duration for all supported animated formats.
 - Duration and width from queued files now dynamically set the Max Duration and Max Width slider maximums to match the actual content in the queue.
 
 #### Conversion Stability
+
 - Added a 15-second timeout around the internal FFmpeg virtual filesystem write step (`writeFile`) to prevent silent indefinite hangs on certain file formats.
 - Added a `Loading: <filename> → <format>` diagnostic log entry immediately before the write step, making it possible to pinpoint exactly where a conversion stalls.
 

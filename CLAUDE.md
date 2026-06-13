@@ -7,7 +7,7 @@ Browser-based image/video converter. Node.js server (`launcher.cjs`) embeds all 
 ```
 npm run serve          # dev server (server.cjs), localhost:3000
 npm run build:exe      # produces dist/ShrinkRay.exe via @yao-pkg/pkg
-gh release upload v5.1.0 dist/ShrinkRay.exe --clobber  # publish
+gh release upload v5.2.0 dist/ShrinkRay.exe --clobber  # publish
 ```
 
 Wine not installed in WSL — the `[icon] Skipped` message during build is expected and harmless.
@@ -27,7 +27,7 @@ Wine not installed in WSL — the `[icon] Skipped` message during build is expec
 
 **COOP/COEP required.** Multi-threaded FFmpeg WASM needs `SharedArrayBuffer`. Both `server.cjs` and `launcher.cjs` set `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response. Without these, all conversions silently hang.
 
-**Pre-processing pipeline.** SVG and HEIC/HEIF cannot go directly to FFmpeg. They are decoded first (SVG via canvas rasterization in `svgRasterizer.js`, HEIC/HEIF via `heicClient.js`), then the resulting PNG blob is handed to `_doConvertImage`. This mirrors each other and should stay that way for any future formats FFmpeg can't natively ingest.
+**Pre-processing pipeline.** SVG and HEIC/HEIF cannot go directly to FFmpeg. They are decoded first (SVG via canvas rasterization in `svgRasterizer.js`, HEIC/HEIF via `heicClient.js`), then the resulting PNG blob is handed to `_doConvertImage`. TGA and TIFF files going to the AVIF encoder are also pre-decoded to PNG via `decodeToPng()` in `ffmpegClient.js`, because the AVIF encoder uses `createImageBitmap()` which cannot decode these formats. This mirrors each other and should stay that way for any future formats FFmpeg can't natively ingest.
 
 **ArrayBuffer detachment gotcha.** `ffmpeg.writeFile(name, bytes)` transfers `bytes.buffer` to the Web Worker, detaching it. After that call, `bytes.length === 0`. Any timeout or size calculation that reads `fileBytes.length` after `writeFile` will silently get 0. Always derive sizes from `file.size` (on the original File/Blob) before calling `writeFile`.
 
