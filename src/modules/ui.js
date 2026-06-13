@@ -53,6 +53,7 @@ export function setupUI(dropzone, fileInput){
   syncSliderAndValue(targetSizeKb, targetSizeVal);
   syncSliderAndValue(document.getElementById('anim-max-fps'), document.getElementById('anim-max-fps-value'));
   syncSliderAndValue(document.getElementById('anim-max-duration'), document.getElementById('anim-max-duration-value'));
+  syncSliderAndValue(document.getElementById('exec-timeout-slider'), document.getElementById('exec-timeout-sec'));
 
   function syncOutputFolderMode() {
     if (!outputFolderMode || !outputFolderPicker) return;
@@ -245,9 +246,19 @@ export function updateItemProgress(id,ratio){
   const b=document.getElementById('bar-'+id), s=document.getElementById('status-'+id);
   if(b) b.style.width=Math.round(ratio*100)+'%';
   if(s){ s.textContent='Processing '+Math.round(ratio*100)+'%'; s.style.color = '#94a3b8'; }
+  const a=document.getElementById('actions-'+id);
+  if(a && !a.querySelector('.item-skip-btn')){
+    const btn=document.createElement('button');
+    btn.type='button'; btn.className='item-skip-btn'; btn.textContent='Skip';
+    btn.title='Skip this file and continue with next';
+    btn.style.cssText='height:17.5px;padding:0 8px;border-radius:5px;background:#1e293b;border:1px solid #475569;color:#78716c;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;vertical-align:middle;line-height:1;';
+    btn.addEventListener('click', ()=>{ document.getElementById('skip-button')?.click(); });
+    a.prepend(btn);
+  }
 }
 export function setItemConverted(id,blob,name){
   const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id);
+  a?.querySelector('.item-skip-btn')?.remove();
   if(b) b.style.width='100%';
   if(s){ s.textContent='Converted'; s.style.color = '#94a3b8'; }
   if(a){
@@ -292,11 +303,13 @@ export function setItemConverted(id,blob,name){
   }
 }
 export function setItemError(id,msg){
-  const s=document.getElementById('status-'+id);
+  const s=document.getElementById('status-'+id), a=document.getElementById('actions-'+id);
+  a?.querySelector('.item-skip-btn')?.remove();
   if(s){ s.textContent=msg||'Error'; s.classList.remove('text-blue-400','text-amber-400'); s.classList.add('text-red-500'); }
 }
 export function setItemSkipped(id){
-  const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id);
+  const s=document.getElementById('status-'+id), b=document.getElementById('bar-'+id), a=document.getElementById('actions-'+id);
+  a?.querySelector('.item-skip-btn')?.remove();
   if(b) b.style.width='0%';
   if(s){ s.textContent='Skipped'; s.style.color='#64748b'; }
 }

@@ -88,8 +88,7 @@ export function applyPreset(settings) {
   setCheckbox('keep-alpha-toggle',        settings.keepAlpha           ?? false);
   setCheckbox('fast-mode-toggle',         settings.fastMode            ?? false);
   setCheckbox('override-compression-cap', settings.overrideCompressionCap ?? false);
-  const timeoutEl = document.getElementById('exec-timeout-sec');
-  if (timeoutEl) timeoutEl.value = String(settings.execTimeoutSec ?? 0);
+  setSlider('exec-timeout-slider', 'exec-timeout-sec', settings.execTimeoutSec ?? 0);
 
   // Dimensions — ncd must change before dependent toggles
   setCheckbox('no-change-dimensions-toggle', settings.noChangeDimensions ?? false, true);
