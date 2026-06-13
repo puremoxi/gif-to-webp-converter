@@ -216,10 +216,17 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   if(shouldStillEncode){
     args.push('-frames:v','1');
   } else {
-    if(isVideoInput) args.push('-r', String(settings.maxFps ?? 15));
-    args.push('-loop', settings.loop?'0':'-1');
+    if(isVideoInput){
+      args.push('-an');  // WebP has no audio — drop all audio streams to avoid mux error
+      args.push('-r', String(settings.maxFps ?? 15));
+    }
+    // libwebp loop: 0=infinite, ≥1=play N times. -1 is invalid and causes encoder error.
+    args.push('-loop', settings.loop ? '0' : '1');
   }
   args.push(outputFs);
+  if(isAnimatedInput && !shouldStillEncode){
+    log(`Animated encode: ${settings.maxFps ?? 15} fps  loop=${settings.loop}  timeout=${execTimeoutMs/1000}s — video/animated WebP is slow in WASM; use Fast Mode or lower FPS if this times out`, 'info');
+  }
   log('ffmpeg ' + args.join(' '), 'cmd');
   const smooth=(r)=>Math.max(.05,Math.min(.99,.05+r*.94));
   const h=({progress})=>{ onProgress&&onProgress(smooth(progress)); };
@@ -228,11 +235,12 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   ffmpeg.on('progress',h);
   ffmpeg.on('log', ffLog);
 
-  // For still images FFmpeg never fires progress events until the frame is done.
-  // Drive the progress bar with elapsed-time estimates and log periodic heartbeats.
+  // FFmpeg progress events are unreliable for animated WebP output in WASM — run a
+  // time-based ticker for all formats so the bar always moves regardless.
   let progressInterval = null;
-  if (shouldStillEncode && onProgress) {
+  if (onProgress) {
     const execStart = Date.now();
+    const label = shouldStillEncode ? 'Still' : 'Animated';
     progressInterval = setInterval(() => {
       const elapsedMs = Date.now() - execStart;
       const elapsedS  = Math.round(elapsedMs / 1000);
@@ -248,7 +256,7 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
       }
       onProgress(Math.min(0.98, progressVal));
       if (elapsedS > 0 && elapsedS % 10 === 0) {
-        log(`Still encoding… ${elapsedS}s elapsed (limit ${execTimeoutMs/1000}s)`, 'info');
+        log(`${label} encoding… ${elapsedS}s elapsed (limit ${execTimeoutMs/1000}s)`, 'info');
       }
     }, 1000);
   }
