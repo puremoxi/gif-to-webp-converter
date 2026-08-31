@@ -247,7 +247,6 @@ function getSettings(){
     loop: document.getElementById('loop-toggle').checked,
     keepAlpha: document.getElementById('keep-alpha-toggle')?.checked ?? false,
     fastMode:  document.getElementById('fast-mode-toggle')?.checked ?? false,
-    overrideCompressionCap: document.getElementById('override-compression-cap')?.checked ?? false,
     execTimeoutSec: parseInt(document.getElementById('exec-timeout-sec')?.value, 10) || 0,
     lossless: document.getElementById('lossless-toggle').checked,
     mixed: document.getElementById('mixed-toggle').checked,

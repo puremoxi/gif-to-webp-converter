@@ -186,27 +186,9 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     args.push('-crf', String(Math.max(0, Math.min(63, crf))));
     if(Number.isFinite(settings.compressionLevel)) args.push('-cpu-used', String(Math.max(0, Math.min(8, 8 - Number(settings.compressionLevel)))));
   } else {
-    if(Number.isFinite(settings.compressionLevel)) {
-      const rawLevel = Number(settings.compressionLevel);
-      // Fast Mode forces level 2. Override cap respects user's full slider value.
-      // Default safety cap is 3 — levels 4-6 are exponentially slower in WASM.
-      let effectiveLevel;
-      if (settings.fastMode) {
-        effectiveLevel = 2;
-        log(`Fast Mode: compression_level=2, quality capped at 80`, 'info');
-      } else if (settings.overrideCompressionCap) {
-        effectiveLevel = rawLevel;
-        if (rawLevel > 3) {
-          log(`Override cap: compression_level=${rawLevel} (warning: levels 4–6 may be very slow in WASM)`, 'warn');
-        }
-      } else {
-        effectiveLevel = Math.min(rawLevel, 3);
-        if (rawLevel > 3) {
-          log(`compression_level capped at 3 (requested ${rawLevel}; levels 4–6 impractically slow in WASM — enable Override cap to use full value)`, 'warn');
-        }
-      }
-      args.push('-compression_level', String(effectiveLevel));
-    }
+    // Note: FFmpeg's libwebp encoder has no compression-effort option (confirmed via
+    // `-h encoder=libwebp`: only lossless/preset/cr_threshold/cr_size/quality exist),
+    // so Compression Level has no effect here — only Quality and Lossless matter.
     const effectiveQuality = settings.fastMode ? Math.min(Number(settings.quality) || 90, 80) : settings.quality;
     if(settings.lossless) args.push('-lossless','1'); else args.push('-q:v',String(effectiveQuality));
   }

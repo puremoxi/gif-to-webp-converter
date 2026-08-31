@@ -4,6 +4,7 @@ export function setupUI(dropzone, fileInput){
   const q=document.getElementById('quality'), qv=document.getElementById('quality-value');
   const qualityLabel=document.getElementById('quality-label');
   const cl=document.getElementById('compression-level'), clv=document.getElementById('compression-level-value');
+  const compressionLevelLabel=document.getElementById('compression-level-label');
   const loss=document.getElementById('lossless-toggle'), mix=document.getElementById('mixed-toggle');
   const loop=document.getElementById('loop-toggle');
   const loopLabel=document.getElementById('loop-label'), mixedLabel=document.getElementById('mixed-label'), losslessLabel=document.getElementById('lossless-label');
@@ -115,6 +116,21 @@ export function setupUI(dropzone, fileInput){
       qv.style.color = locked ? disabledFontColor : enabledFontColor;
     }
   }
+  function syncCompressionLevel(avifMode){
+    // Compression Level only affects AVIF encode speed/size; FFmpeg's libwebp encoder
+    // has no compression-effort option, so it's a no-op for WebP — lock it there.
+    const locked = !avifMode;
+    if(cl) cl.disabled = locked;
+    if(compressionLevelLabel){
+      compressionLevelLabel.style.color = locked ? disabledFontColor : '';
+      compressionLevelLabel.style.pointerEvents = locked ? 'none' : '';
+    }
+    if(clv){
+      clv.disabled = locked;
+      clv.style.borderColor = locked ? '#334155' : '#64748b';
+      clv.style.color = locked ? disabledFontColor : enabledFontColor;
+    }
+  }
   function sync(){
     const avifMode = outputFormat?.value === 'avif';
     if(avifMode) {
@@ -129,6 +145,7 @@ export function setupUI(dropzone, fileInput){
     if(mixLocked) loss.checked = false;
     lockEl(loss, losslessLabel, avifMode || mixLocked);
     lockEl(loop, loopLabel, avifMode);
+    syncCompressionLevel(avifMode);
     syncQuality();
   }
   loss.addEventListener('change',sync); mix.addEventListener('change',sync); loop.addEventListener('change',sync); outputFormat?.addEventListener('change', sync); sync();

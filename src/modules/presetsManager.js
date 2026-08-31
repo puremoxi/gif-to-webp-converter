@@ -7,7 +7,6 @@ export const DEFAULT_PRESET = {
   loop: true,
   keepAlpha: false,
   fastMode: false,
-  overrideCompressionCap: false,
   execTimeoutSec: 0,
   lossless: false,
   mixed: false,
@@ -87,7 +86,6 @@ export function applyPreset(settings) {
   setCheckbox('loop-toggle', settings.loop ?? true);
   setCheckbox('keep-alpha-toggle',        settings.keepAlpha           ?? false);
   setCheckbox('fast-mode-toggle',         settings.fastMode            ?? false);
-  setCheckbox('override-compression-cap', settings.overrideCompressionCap ?? false);
   setSlider('exec-timeout-slider', 'exec-timeout-sec', settings.execTimeoutSec ?? 0);
 
   // Dimensions — ncd must change before dependent toggles

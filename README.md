@@ -106,9 +106,8 @@ That's it. No installation, no Node.js required.
   - AVIF uses an isolated AVIF-only WASM engine in `vendor/jsquash-avif/`; WebP remains on the existing FFmpeg core.
 - Settings — Quality & Compression
   - Quality (0–100), mapped to WebP qscale or AVIF CRF as appropriate.
-  - Compression Level (0–6)
-  - **Fast Mode**: caps compression level at 2 and quality at 80 for faster encoding.
-  - **Override Compression Level Cap**: bypasses the default cap of 3 to allow levels 4–6 (slower but smaller). Has no effect when Fast Mode is on.
+  - Compression Level (0–6) — AVIF only, trades encode time for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this has no effect on WebP output and is disabled in that mode.
+  - **Fast Mode**: caps quality at 80 for faster WebP encoding.
   - **Conversion Timeout (sec)**: manual override for the per-file encoding time limit. 0 = automatic scaling (default). Range: 0–600 s.
 - Settings — Animation & Mode
   - Loop Animation (WebP only; disabled for AVIF)
@@ -225,9 +224,8 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 | **File Output** | Output Folder | **Same As Source** saves each output file next to its source. **Select Folder** lets you choose a destination folder via the browser File System Access API. |
 | **File Output** | File Format | Choose **WebP** (default, best compatibility) or **AVIF** (often smaller for still images). WebP-only options (Lossless, Mixed, Loop) are disabled when AVIF is selected. |
 | **Quality & Compression** | Quality (0–100) | Controls lossy compression strength. Higher values preserve more detail at larger file sizes. Maps to WebP `qscale` or AVIF `CRF`. Default: 90. |
-| **Quality & Compression** | Compression Level (0–6) | Controls the encoding effort. Higher values produce smaller files but take longer. Default: 6. |
-| **Quality & Compression** | Fast Mode | Caps compression level at 2 and quality at 80. Significantly faster encoding; useful for previewing or batch-processing large queues. |
-| **Quality & Compression** | Override Compression Level Cap | When on, allows compression levels 4–6 (which can be slow in WebAssembly). Disabled automatically when Fast Mode is on. |
+| **Quality & Compression** | Compression Level (0–6) | AVIF only — trades AV1 encoder speed for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this control has no effect on WebP output and is disabled when Format is WebP. Default: 6. |
+| **Quality & Compression** | Fast Mode | Caps quality at 80 for WebP. Significantly faster encoding; useful for previewing or batch-processing large queues. |
 | **Quality & Compression** | Conversion Timeout (sec) | Sets a manual time limit for each file's encoding step. 0 = automatic (90 s base + 15 s/MB for stills, 5 min for animated). Use this if a specific file consistently times out at the automatic limit. |
 | **Animation & Mode** | Loop Animation | When on, animated WebP outputs loop continuously. WebP only. |
 | **Animation & Mode** | Lossless Compression | Encodes the output losslessly (no quality loss, larger file). WebP only. |
