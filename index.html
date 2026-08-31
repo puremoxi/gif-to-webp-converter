@@ -40,6 +40,11 @@
     .toggle-thumb { width:12px; height:12px; border-radius:999px; background:#475569; position:absolute; left:2px; top:2px; transition:transform 0.15s,background 0.15s; }
     .toggle-input:checked + .toggle-track { background:rgba(51,65,85,0.7); border-color:#94a3b8; }
     .toggle-input:checked + .toggle-track .toggle-thumb { transform:translateX(16px); background:#94a3b8; }
+    /* Live Preview before/after slider */
+    .live-preview-handle { position:absolute; top:0; bottom:0; left:50%; width:32px; margin-left:-16px; cursor:ew-resize; touch-action:none; }
+    .live-preview-handle-line { position:absolute; top:0; bottom:0; left:50%; width:2px; background:#94a3b8; transform:translateX(-50%); box-shadow:0 0 6px rgba(0,0,0,0.6); }
+    .live-preview-handle-knob { position:absolute; top:50%; left:50%; width:28px; height:28px; border-radius:50%; background:#1e293b; border:2px solid #94a3b8; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; }
+    .queue-card-preview-selected { border-color:#94a3b8 !important; box-shadow:0 0 0 1px #94a3b8; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen p-4 md:p-8">
@@ -82,6 +87,44 @@
       <button id="clear-button" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#64748b;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear Queue</button>
       <button id="download-all" disabled style="flex:1;background:rgba(51,65,85,0.7);border:1px solid #475569;border-radius:8px;padding:8px 16px;font-weight:600;font-size:14px;color:#64748b;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Download ALL</button>
     </div>
+
+    <section id="live-preview" class="mb-4" style="max-width:700px;margin-left:auto;margin-right:auto;">
+      <button id="live-preview-toggle"
+              class="w-full text-left font-semibold py-2 px-3 rounded-lg bg-slate-700/70 border border-slate-600 hover:bg-slate-700 transition"
+              style="color:#94a3b8;"
+              aria-expanded="true"
+              aria-controls="live-preview-body">
+        Live Preview
+      </button>
+      <div id="live-preview-body" class="mt-3">
+        <div id="live-preview-empty" style="position:relative;border:1px dashed #334155;border-radius:8px;height:500px;overflow:hidden;background:#0f172a url('/images/live-preview-default.png') center/cover no-repeat;">
+          <div style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);text-align:center;background:rgba(15,23,42,0.75);padding:8px 16px;border-radius:8px;">
+            <div style="color:#cbd5e1;font-style:italic;font-size:14px;">Awaiting queued still(s)</div>
+            <div style="color:#94a3b8;font-size:11px;margin-top:2px;">(default image currently showing)</div>
+          </div>
+        </div>
+        <div id="live-preview-stage" hidden style="position:relative;width:100%;height:500px;border-radius:8px;overflow:hidden;background:#0f172a;border:1px solid #334155;user-select:none;">
+          <img id="live-preview-before" alt="Original" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;"/>
+          <div id="live-preview-after-wrap" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;">
+            <img id="live-preview-after" alt="Compressed preview" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;"/>
+          </div>
+          <div id="live-preview-handle" class="live-preview-handle">
+            <div class="live-preview-handle-line"></div>
+            <div class="live-preview-handle-knob">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3 2 7l3 4M9 3l3 4-3 4" stroke="#94a3b8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div style="position:absolute;top:8px;left:10px;font-size:11px;font-weight:600;color:#94a3b8;background:rgba(15,23,42,0.7);padding:2px 8px;border-radius:4px;pointer-events:none;">Original</div>
+          <div style="position:absolute;top:8px;right:10px;font-size:11px;font-weight:600;color:#1e6e78;background:rgba(15,23,42,0.7);padding:2px 8px;border-radius:4px;pointer-events:none;">Preview</div>
+          <div id="live-preview-default-notice" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);text-align:center;background:rgba(15,23,42,0.75);padding:4px 12px;border-radius:6px;pointer-events:none;">
+            <div style="color:#cbd5e1;font-style:italic;font-size:12px;">Awaiting queued still(s)</div>
+            <div style="color:#94a3b8;font-size:10px;margin-top:1px;">(default image currently showing)</div>
+          </div>
+          <div id="live-preview-status" style="position:absolute;bottom:8px;left:10px;font-size:12px;color:#cbd5e1;background:rgba(15,23,42,0.7);padding:3px 10px;border-radius:6px;display:none;"></div>
+        </div>
+        <div id="live-preview-size-label" style="margin-top:8px;text-align:center;font-size:13px;color:#94a3b8;min-height:18px;"></div>
+      </div>
+    </section>
 
     <section id="advanced" class="mb-4" style="max-width:700px;margin-left:auto;margin-right:auto;">
       <button id="advanced-toggle"

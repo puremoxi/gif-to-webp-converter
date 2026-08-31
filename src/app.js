@@ -7,6 +7,8 @@ import { getMediaInfo } from './modules/mediaInfo.js';
 import { rasterizeSvg } from './modules/svgRasterizer.js';
 import { isHeicFile, decodeHeicToBlob, hasHeicEngineFiles } from './modules/heicClient.js';
 import { listPresets, savePreset, deletePreset, applyPreset, DEFAULT_PRESET } from './modules/presetsManager.js';
+import { initPreviewController, setPreviewSubject, clearPreviewSubjectIfMatches, getPreviewSubjectId, requestPreviewUpdate } from './modules/previewController.js';
+import { renderPreviewState } from './modules/livePreviewPanel.js';
 
 const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
 const startBtn=document.getElementById('start-button'); const clearBtn=document.getElementById('clear-button'); const zipBtn=document.getElementById('download-all'); const status=document.getElementById('converter-status');
@@ -20,6 +22,19 @@ const removedIds = new Set();
 const fileToId = new WeakMap();
 const queuedDurations = new Map(); // id → duration in seconds
 const queuedWidths    = new Map(); // id → source width in pixels
+const stillFiles = new Map(); // id → File, insertion-ordered; only still (non-animated) queue items
+
+function highlightPreviewSelection(id) {
+  document.querySelectorAll('.queue-card-preview-selected').forEach(el => el.classList.remove('queue-card-preview-selected'));
+  const el = id != null ? document.getElementById(`item-${id}`) : null;
+  if (el) el.classList.add('queue-card-preview-selected');
+}
+
+function selectNextPreviewSubject() {
+  const next = stillFiles.entries().next().value;
+  if (next) { setPreviewSubject(next[1], next[0]); highlightPreviewSelection(next[0]); }
+  else { highlightPreviewSelection(null); }
+}
 
 function syncMaxDurationField() {
   const slider = document.getElementById('anim-max-duration');
@@ -103,6 +118,8 @@ function removeFromQueue(id){
   syncMaxDurationField();
   queuedWidths.delete(id);
   syncMaxWidthField();
+  stillFiles.delete(id);
+  if (clearPreviewSubjectIfMatches(id)) selectNextPreviewSubject();
   const el = document.getElementById(`item-${id}`);
   if (el) el.remove();
   queued = Math.max(0, queued - 1);
@@ -112,6 +129,10 @@ function removeFromQueue(id){
 status.textContent='Ready. Please add files.';
 
 setupUI(dropzone,fileInput);
+
+initPreviewController({ getSettings, onUpdate: renderPreviewState });
+document.getElementById('advanced-body')?.addEventListener('input', requestPreviewUpdate);
+document.getElementById('advanced-body')?.addEventListener('change', requestPreviewUpdate);
 
 async function initPresets() {
   const select = document.getElementById('preset-select');
@@ -441,6 +462,16 @@ async function handle(files){
       }
       if (el && window.UIExt?.populateFileSizeUI) window.UIExt.populateFileSizeUI(el, it.file);
       if (el && window.UIExt?.populateResolutionUI) await window.UIExt.populateResolutionUI(el, it.file);
+      if (el) {
+        el.style.cursor = 'pointer';
+        el.title = 'Click to preview this file in Live Preview';
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('a,button')) return; // don't hijack download/remove/skip clicks
+          if (!stillFiles.has(it.id)) return; // only stills support live preview
+          setPreviewSubject(it.file, it.id);
+          highlightPreviewSelection(it.id);
+        });
+      }
     } catch {}
 
     getMediaInfo(it.file)
@@ -453,6 +484,13 @@ async function handle(files){
         if (info.width != null && info.width > 0) {
           queuedWidths.set(it.id, info.width);
           syncMaxWidthField();
+        }
+        if (!info.animated) {
+          stillFiles.set(it.id, it.file);
+          if (getPreviewSubjectId() == null) {
+            setPreviewSubject(it.file, it.id);
+            highlightPreviewSelection(it.id);
+          }
         }
         try {
           const el = await waitForItemEl(it.id, 1500);
@@ -542,6 +580,10 @@ startBtn.addEventListener('click', async ()=>{
 
 document.getElementById('clear-button').addEventListener('click', ()=>{
   queue.clear(); queued=0; removedIds.clear(); converted.clear(); queuedDurations.clear(); syncMaxDurationField(); queuedWidths.clear(); syncMaxWidthField(); status.textContent='Ready. Please add files.'; updateControls();
+  stillFiles.clear();
+  const currentSubject = getPreviewSubjectId();
+  if (currentSubject != null) clearPreviewSubjectIfMatches(currentSubject);
+  highlightPreviewSelection(null);
   const ag = document.getElementById('aggregate-time');
   if (ag) ag.textContent = '';
 });

@@ -1,4 +1,5 @@
 // /src/ui-extensions.js
+import { initLivePreviewPanel } from './modules/livePreviewPanel.js';
 
 // Center headers & setup collapsibles
 function setupCollapsible(buttonId, bodyId, defaultExpanded) {
@@ -21,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCollapsible('processing-queue-toggle', 'processing-queue-body', true);
   setupCollapsible('advanced-toggle', 'advanced-body', false);
   setupCollapsible('diagnostics-toggle', 'diagnostics-body', false);
+  setupCollapsible('live-preview-toggle', 'live-preview-body', true);
+  initLivePreviewPanel();
 
   const diagToggle = document.getElementById('diag-toggle');
   const diagToggleLabel = document.getElementById('diag-toggle-label');
