@@ -33,6 +33,11 @@ function revoke(url) {
   if (url) { try { URL.revokeObjectURL(url); } catch {} }
 }
 
+function formatBytes(bytes) {
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
+}
+
 export function initLivePreviewPanel() {
   const { stage, handle } = els();
   if (!stage || !handle) return;
@@ -111,9 +116,10 @@ export function renderPreviewState(state) {
       let pctText = '';
       if (origBytes > 0) {
         const change = (1 - state.result.blob.size / origBytes) * 100;
+        const origSize = formatBytes(origBytes);
         pctText = change >= 0
-          ? `(\u2193 ${change.toFixed(0)}% from original)`
-          : `(\u2191 ${Math.abs(change).toFixed(0)}% from original)`;
+          ? `(\u2193 ${change.toFixed(0)}% from original ${origSize})`
+          : `(\u2191 ${Math.abs(change).toFixed(0)}% from original ${origSize})`;
       }
       sizeLabel.innerHTML = `<div><b style="font-size:11px;">Estimated File Size</b><span style="font-size:11px;font-weight:400;"> | </span><span style="font-size:11px;">${kb} KB</span>${pctText ? ` <span style="font-size:11px;color:#64748b;">${pctText}</span>` : ''}</div>`;
     }
