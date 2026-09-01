@@ -96,7 +96,7 @@ export function renderPreviewState(state) {
 
   if (state.status === 'error') {
     if (status) { status.textContent = `Preview unavailable: ${state.error || 'encode failed'}`; status.style.display = 'block'; }
-    if (sizeLabel) sizeLabel.textContent = '';
+    if (sizeLabel) sizeLabel.innerHTML = '';
     return;
   }
 
@@ -107,13 +107,18 @@ export function renderPreviewState(state) {
     if (after) after.src = currentAfterUrl;
     if (sizeLabel) {
       const kb = (state.result.blob.size / 1024).toFixed(1);
-      const origKb = state.originalSize ? (state.originalSize / 1024).toFixed(1) : null;
-      const pct = state.originalSize
-        ? Math.max(0, (1 - state.result.blob.size / state.originalSize) * 100).toFixed(0)
-        : null;
-      sizeLabel.textContent = origKb
-        ? `≈ ${kb} KB estimated (↓ ${pct}% from ${origKb} KB) — actual output may vary slightly`
-        : `≈ ${kb} KB estimated`;
+      const origBytes = state.originalSize || 0;
+      let pctText = '';
+      if (origBytes > 0) {
+        const change = (1 - state.result.blob.size / origBytes) * 100;
+        pctText = change >= 0
+          ? `(\u2193 ${change.toFixed(0)}% from original)`
+          : `(\u2191 ${Math.abs(change).toFixed(0)}% from original)`;
+      }
+      sizeLabel.innerHTML = `
+        <div>Estimate: ${kb} KB${pctText ? ` <span style="font-size:11px;color:#64748b;">${pctText}</span>` : ''}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">(actual output may vary slightly)</div>
+      `;
     }
   }
 }
