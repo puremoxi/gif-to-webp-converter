@@ -107,7 +107,7 @@ That's it. No installation, no Node.js required.
 - Settings — Quality & Compression
   - Quality (0–100), mapped to WebP qscale or AVIF CRF as appropriate.
   - Compression Level (0–6) — AVIF only, trades encode time for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this has no effect on WebP output and is disabled in that mode.
-  - **Fast Mode**: caps quality at 80 for faster WebP encoding.
+  - **Fast Mode**: caps quality at 80 for faster encoding. For AVIF, also forces the fastest encode speed, overriding Compression Level.
   - **Conversion Timeout (sec)**: manual override for the per-file encoding time limit. 0 = automatic scaling (default). Range: 0–600 s.
 - Settings — Animation & Mode
   - Loop Animation (WebP only; disabled for AVIF)
@@ -225,7 +225,7 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 | **File Output** | File Format | Choose **WebP** (default, best compatibility) or **AVIF** (often smaller for still images). WebP-only options (Lossless, Mixed, Loop) are disabled when AVIF is selected. |
 | **Quality & Compression** | Quality (0–100) | Controls lossy compression strength. Higher values preserve more detail at larger file sizes. Maps to WebP `qscale` or AVIF `CRF`. Default: 90. |
 | **Quality & Compression** | Compression Level (0–6) | AVIF only — trades AV1 encoder speed for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this control has no effect on WebP output and is disabled when Format is WebP. Default: 6. |
-| **Quality & Compression** | Fast Mode | Caps quality at 80 for WebP. Significantly faster encoding; useful for previewing or batch-processing large queues. |
+| **Quality & Compression** | Fast Mode | Caps quality at 80. For AVIF, also forces the fastest encode speed (overriding Compression Level). Significantly faster encoding; useful for previewing or batch-processing large queues. |
 | **Quality & Compression** | Conversion Timeout (sec) | Sets a manual time limit for each file's encoding step. 0 = automatic (90 s base + 15 s/MB for stills, 5 min for animated). Use this if a specific file consistently times out at the automatic limit. |
 | **Animation & Mode** | Loop Animation | When on, animated WebP outputs loop continuously. WebP only. |
 | **Animation & Mode** | Lossless Compression | Encodes the output losslessly (no quality loss, larger file). WebP only. |

@@ -165,12 +165,17 @@ async function fileToImageData(file, settings) {
 
 function avifOptions(settings) {
   const compression = Number.isFinite(settings.compressionLevel) ? settings.compressionLevel : 6;
-  const quality = Math.max(0, Math.min(100, Number(settings.quality) || 90));
+  const rawQuality = Math.max(0, Math.min(100, Number(settings.quality) || 90));
+  // Fast Mode forces the fastest AV1 encode speed (overriding Compression Level)
+  // and caps quality at 80, matching WebP's Fast Mode behavior.
+  const quality = settings.fastMode ? Math.min(rawQuality, 80) : rawQuality;
+  const speed = settings.fastMode ? 10 : Math.max(4, Math.min(10, Math.round(10 - compression)));
+  if (settings.fastMode) log(`Fast Mode: AVIF speed=10, quality capped at 80`, 'info');
   return {
     ...defaultOptions,
     quality,
     qualityAlpha: settings.keepAlpha ? quality : -1,
-    speed: Math.max(4, Math.min(10, Math.round(10 - compression))),
+    speed,
   };
 }
 
