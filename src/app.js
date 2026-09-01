@@ -245,7 +245,7 @@ function getSettings(){
     quality: parseInt(document.getElementById('quality').value,10)||90,
     compressionLevel: parseInt(document.getElementById('compression-level').value,10)||6,
     loop: document.getElementById('loop-toggle').checked,
-    keepAlpha: document.getElementById('keep-alpha-toggle')?.checked ?? false,
+    keepAlpha: document.getElementById('keep-alpha-toggle')?.checked ?? true,
     fastMode:  document.getElementById('fast-mode-toggle')?.checked ?? false,
     execTimeoutSec: parseInt(document.getElementById('exec-timeout-sec')?.value, 10) || 0,
     lossless: document.getElementById('lossless-toggle').checked,

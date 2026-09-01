@@ -5,7 +5,7 @@ export const DEFAULT_PRESET = {
   quality: 90,
   compressionLevel: 6,
   loop: true,
-  keepAlpha: false,
+  keepAlpha: true,
   fastMode: false,
   execTimeoutSec: 0,
   lossless: false,
@@ -84,7 +84,7 @@ export function applyPreset(settings) {
   setCheckbox('lossless-toggle', settings.lossless ?? false, true);
   setCheckbox('mixed-toggle', settings.mixed ?? false, true);
   setCheckbox('loop-toggle', settings.loop ?? true);
-  setCheckbox('keep-alpha-toggle',        settings.keepAlpha           ?? false);
+  setCheckbox('keep-alpha-toggle',        settings.keepAlpha           ?? true);
   setCheckbox('fast-mode-toggle',         settings.fastMode            ?? false);
   setSlider('exec-timeout-slider', 'exec-timeout-sec', settings.execTimeoutSec ?? 0);
 
