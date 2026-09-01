@@ -115,7 +115,7 @@ export function renderPreviewState(state) {
           ? `(\u2193 ${change.toFixed(0)}% from original)`
           : `(\u2191 ${Math.abs(change).toFixed(0)}% from original)`;
       }
-      sizeLabel.innerHTML = `<div><b style="font-size:11px;">Estimated File Size</b><span style="font-size:11px;font-weight:400;"> | </span>${kb} KB${pctText ? ` <span style="font-size:11px;color:#64748b;">${pctText}</span>` : ''}</div>`;
+      sizeLabel.innerHTML = `<div><b style="font-size:11px;">Estimated File Size</b><span style="font-size:11px;font-weight:400;"> | </span><span style="font-size:11px;">${kb} KB</span>${pctText ? ` <span style="font-size:11px;color:#64748b;">${pctText}</span>` : ''}</div>`;
     }
   }
 }
