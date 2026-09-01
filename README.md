@@ -1,6 +1,6 @@
 <img src="icons/app-icon.png" alt="Shrink Ray" width="48" align="left" style="margin-right:12px">
 
-# Shrink Ray v5.2
+# Shrink Ray v5.3
 
 A self-contained browser-based image and video converter powered by FFmpeg WASM (multi-threaded).  
 All processing is performed locally — no files are uploaded.
@@ -15,9 +15,11 @@ All processing is performed locally — no files are uploaded.
   - [What is FFmpeg?](#what-is-ffmpeg)
 - [Usage](#usage)
   - [Quick Start (Windows / PowerShell)](#quick-start-option-01)
-- [Features v5.2](#features)
-- [How It Works v5.2](#how-it-works)
-- [ChangeLog v5.2](#changelog)
+- [Features v5.3](#features)
+- [How It Works v5.3](#how-it-works)
+  - [Live Preview](#live-preview)
+  - [Settings Reference](#settings-reference)
+- [ChangeLog v5.3](#changelog)
 - [License](#license)
 
 ---
@@ -74,7 +76,7 @@ That's it. No installation, no Node.js required.
 
 <a id="features"></a>
 
-## 🆕 Features --> v5.2
+## 🆕 Features --> v5.3
 
 - Basic Features
   - Converts GIF, PNG, JPG/JPEG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, **HEIC, HEIF**, MP4, MOV, and WebM files to WebP or AVIF.
@@ -87,6 +89,11 @@ That's it. No installation, no Node.js required.
   - Multiple files as Zip File (Download ALL button)
   - Add/Remove files in the Queue
   - Clear Queue is enabled only when queued items exist.
+- Live Preview
+  - Before/after slider shows the real compression effect of the current settings on a still image.
+  - Updates automatically (debounced) whenever a setting changes — no need to re-run a full conversion to see the impact of a slider change.
+  - Shows a bundled default image until a still is queued; click any queued still to preview that file specifically.
+  - Displays an estimated output file size and percent change below the slider.
 - Data Points per File
   - File size of original file
   - File size of resulting converted file
@@ -106,9 +113,7 @@ That's it. No installation, no Node.js required.
   - AVIF uses an isolated AVIF-only WASM engine in `vendor/jsquash-avif/`; WebP remains on the existing FFmpeg core.
 - Settings — Quality & Compression
   - Quality (0–100), mapped to WebP qscale or AVIF CRF as appropriate.
-  - Compression Level (0–6) — AVIF only, trades encode time for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this has no effect on WebP output and is disabled in that mode.
-  - **Fast Mode**: caps quality at 80 for faster encoding. For AVIF, also forces the fastest encode speed, overriding Compression Level.
-  - **Conversion Timeout (sec)**: manual override for the per-file encoding time limit. 0 = automatic scaling (default). Range: 0–600 s.
+  - Compression Level (0–6) — AVIF only, trades encode time for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this control is disabled and has no effect when Format is WebP.
 - Settings — Animation & Mode
   - Loop Animation (WebP only; disabled for AVIF)
   - Lossless Compression (WebP only; disabled for AVIF)
@@ -116,12 +121,15 @@ That's it. No installation, no Node.js required.
 - Settings — Animated Output
   - Max FPS: caps output frame rate for animated inputs (GIF, APNG, video). Lower values reduce file size significantly.
   - Max Duration (sec): trims animated output to a set number of seconds. Applies to video, GIF, and APNG inputs.
-- Settings — Dimensions & File Size
-  - Do Not Change Dimensions toggle
-  - Preserve Transparency toggle: preserves or strips transparency in the output.
+- Settings — Image Dimensions
+  - No Resize toggle (formerly "Do Not Change Dimensions")
   - Max Height Constraint toggle + slider (px)
   - Max Width Constraint toggle + slider (px)
+- Settings — File Size & Conversion Details
+  - Preserve Transparency toggle (formerly "Keep Alpha Channel"): preserves or strips transparency in the output.
+  - **Fast Mode**: caps quality at 80 for faster encoding. For AVIF, also forces the fastest encode speed, overriding Compression Level. Recommended for large uncompressed sources (BMP, TIFF, TGA), batch processing, or when speed matters more than file size.
   - Target File Size toggle + slider (KB): auto-adjusts quality via binary search to hit the target. Overrides the quality slider.
+  - **Conversion Timeout (sec)**: manual override for the per-file encoding time limit. 0 = automatic scaling (default). Range: 0–600 s.
 - Presets
   - Save any combination of settings as a named preset using the **Save As** button in the Settings panel.
   - Load a saved preset by selecting it from the Preset dropdown — settings apply immediately.
@@ -153,13 +161,13 @@ That's it. No installation, no Node.js required.
 
 <a id="how-it-works"></a>
 
-## 🆕 How it works --> v5.2
+## 🆕 How it works --> v5.3
 
 **1. Open the app — the interface loads ready to accept files.**
 
-The Shrink Ray interface loads with a Drag & Drop zone and collapsed Settings, Diagnostics, and Queue panels. The status badge reads "Ready. Please add files." The conversion engine loads in the background; once ready, the **Start Conversion** button becomes active.
+The Shrink Ray interface loads with a Drag & Drop zone, an active Live Preview panel, and collapsed Settings, Diagnostics, and Queue panels. The status badge reads "Ready. Please add files." The conversion engine loads in the background; once ready, the **Start Conversion** button becomes active.
 
-![Shrink Ray — empty state](./images/UI_v51_01_landing.png)
+![Shrink Ray — empty state](./images/UI_v53_01_landing.png)
 
 ---
 
@@ -167,13 +175,15 @@ The Shrink Ray interface loads with a Drag & Drop zone and collapsed Settings, D
 
 Drag GIF, PNG, JPG, WebP, BMP, TIFF, APNG, ICO, TGA, SVG, HEIC, HEIF, MP4, MOV, or WebM files directly onto the drop zone. Each file becomes a card in the Queue showing its filename, file size, resolution, frame count, FPS, duration, and whether it is an animation or still image. The **×** button on each card lets you remove individual files before conversion starts.
 
-![Shrink Ray — files added to queue](./images/UI_v51_04_files_queued.png)
+As soon as a still image is queued, the **Live Preview** panel above the Queue automatically switches to that file — see [Live Preview](#live-preview) below.
+
+![Shrink Ray — files added to queue](./images/UI_v53_02_queued.png)
 
 ---
 
 **3. (Optional) Expand Settings to configure the conversion.**
 
-Click the **Settings** bar to reveal all conversion controls. See the [Settings Reference](#settings-reference) below for a description of each option. The defaults work well for most files — Quality 90, WebP output, Max Width 1200 px, Max FPS 24.
+Click the **Settings** bar to reveal all conversion controls. See the [Settings Reference](#settings-reference) below for a description of each option. The defaults work well for most files — Quality 90, WebP output, Max Width 1200 px, Max FPS 24. While Settings is open, watch the **Live Preview** panel above it — every slider or toggle change is reflected there within a fraction of a second.
 
 At the top of the panel is the **Preset bar**:
 
@@ -182,15 +192,15 @@ At the top of the panel is the **Preset bar**:
 - Click **Delete** to remove the currently selected preset.
 - Click **Reset** to restore all settings to factory defaults and snap the dropdown back to Default.
 
-![Shrink Ray — Settings panel open](./images/UI_v51_02_settings_open.png)
+![Shrink Ray — Settings panel open](./images/UI_v53_03_settings_open.png)
 
 ---
 
 **4. Click "Start Conversion" to begin processing.**
 
-Files are converted sequentially. Each card shows a live progress bar and percentage counter as its file is processed. Completed files show their size summary immediately — you can download them while the remaining files are still converting.
+Files are converted sequentially. Each card shows a live progress bar and percentage counter as its file is processed, plus a **Skip** button to abort just that file and move on to the next. Completed files show their size summary immediately — you can download them while the remaining files are still converting.
 
-![Shrink Ray — conversion in progress](./images/UI_v51_06_converting.png)
+![Shrink Ray — conversion in progress](./images/UI_v53_05_converting.png)
 
 ---
 
@@ -198,7 +208,7 @@ Files are converted sequentially. Each card shows a live progress bar and percen
 
 When each file finishes, its card updates to **Converted** and shows three data points: original file size, output file size, and the percent change. Use the **download icon** on each card to save that file, or use **Download ALL** to package every converted file into a single timestamped zip.
 
-![Shrink Ray — conversion complete](./images/UI_v51_07_complete.png)
+![Shrink Ray — conversion complete](./images/UI_v53_06_complete.png)
 
 ### Size reduction vs. size increase
 
@@ -209,11 +219,28 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 
 ---
 
+<a id="live-preview"></a>
+
+### 🆕 Live Preview
+
+The **Live Preview** panel sits between the action buttons and the Settings/Diagnostics/Queue sections, and is expanded by default. It renders a fast, downscaled encode of a still image using your *current* Settings, so you can see the compression trade-off before running a real conversion.
+
+![Shrink Ray — Live Preview panel](./images/UI_v53_02_queued.png)
+
+- **Before/after slider.** Drag the center handle (or click anywhere on the image) to reveal more of the **Original** (left) or the compressed **Preview** (right).
+- **Default image.** Before any still is queued, the panel previews a bundled sample image so the slider is interactive from the moment the app loads. A small "Awaiting queued still(s)" notice appears under the default image.
+- **Live subject.** As soon as a still image (not a video) is added to the Queue, the panel automatically switches to that file. Click a different queued still's thumbnail at any time to make it the preview subject.
+- **Debounced updates.** Any change to Quality, Format, Compression Level, resize constraints, transparency, or the other Settings controls re-encodes the preview automatically (roughly a quarter-second debounce) — no need to click Start Conversion to check the effect of a setting.
+- **Estimated File Size.** Below the slider, a label shows the encoded preview's size and percent change from the original, e.g. `Estimated File Size | 12.9 KB (↓ 93% from original 173.5 KB)`. This is a fast approximation from a downscaled encode and can differ slightly from the final converted file size.
+- Video files are not live-previewed; the panel keeps showing the previous still (or the default image) while a video is queued.
+
+---
+
 <a id="settings-reference"></a>
 
 ### Settings Reference
 
-![Shrink Ray — Settings panel](./images/UI_v51_03_settings_panel.png)
+![Shrink Ray — Settings panel](./images/UI_v53_04_settings_panel.png)
 
 | Section | Control | What it does |
 |---|---|---|
@@ -224,25 +251,49 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 | **File Output** | Output Folder | **Same As Source** saves each output file next to its source. **Select Folder** lets you choose a destination folder via the browser File System Access API. |
 | **File Output** | File Format | Choose **WebP** (default, best compatibility) or **AVIF** (often smaller for still images). WebP-only options (Lossless, Mixed, Loop) are disabled when AVIF is selected. |
 | **Quality & Compression** | Quality (0–100) | Controls lossy compression strength. Higher values preserve more detail at larger file sizes. Maps to WebP `qscale` or AVIF `CRF`. Default: 90. |
-| **Quality & Compression** | Compression Level (0–6) | AVIF only — trades AV1 encoder speed for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this control has no effect on WebP output and is disabled when Format is WebP. Default: 6. |
-| **Quality & Compression** | Fast Mode | Caps quality at 80. For AVIF, also forces the fastest encode speed (overriding Compression Level). Significantly faster encoding; useful for previewing or batch-processing large queues. |
-| **Quality & Compression** | Conversion Timeout (sec) | Sets a manual time limit for each file's encoding step. 0 = automatic (90 s base + 15 s/MB for stills, 5 min for animated). Use this if a specific file consistently times out at the automatic limit. |
+| **Quality & Compression** | Compression Level (0–6) | AVIF only — trades AV1 encoder speed for smaller files. FFmpeg's libwebp encoder has no compression-effort option, so this control is disabled and has no effect when Format is WebP. Default: 6. |
 | **Animation & Mode** | Loop Animation | When on, animated WebP outputs loop continuously. WebP only. |
 | **Animation & Mode** | Lossless Compression | Encodes the output losslessly (no quality loss, larger file). WebP only. |
 | **Animation & Mode** | Mixed Compression | Allows the encoder to mix lossy and lossless frames per-frame for animated outputs. WebP only. |
 | **Animated Output** | Max FPS | Caps the output frame rate for animated inputs (GIF, APNG, video). Reducing FPS is one of the most effective ways to reduce animated file size. Default: 24. |
-| **Animated Output** | Max Duration (sec) | Trims animated output to a maximum length in seconds. Useful for keeping looping GIFs short. Default: 3600 (effectively no limit). |
-| **Dimensions & File Size** | Do Not Change Dimensions | When on, the output is not resized regardless of Max Width or Max Height settings. |
-| **Dimensions & File Size** | Preserve Transparency | When on, transparency is preserved in the output. When off (default), the alpha channel is stripped, which can reduce file size for images that do not need transparency. |
-| **Dimensions & File Size** | Max Height Constraint | When enabled, the output is scaled down (maintaining aspect ratio) so its height does not exceed the slider value. Default: 1080 px. |
-| **Dimensions & File Size** | Max Width Constraint | When enabled (default), the output is scaled down (maintaining aspect ratio) so its width does not exceed the slider value. Default: 1200 px. |
-| **Dimensions & File Size** | Target File Size | When enabled, quality is automatically adjusted via binary search to hit the target size in KB. Overrides the Quality slider. Useful for hitting a specific file size budget. |
+| **Animated Output** | Max Duration (sec) | Trims animated output to a maximum length in seconds. Useful for keeping looping GIFs short. |
+| **Image Dimensions** | No Resize | When on, the output is not resized regardless of Max Width or Max Height settings. (Formerly labeled "Do Not Change Dimensions".) |
+| **Image Dimensions** | Max Height Constraint | When enabled, the output is scaled down (maintaining aspect ratio) so its height does not exceed the slider value. Default: 1080 px. |
+| **Image Dimensions** | Max Width Constraint | When enabled (default), the output is scaled down (maintaining aspect ratio) so its width does not exceed the slider value. Default: 1200 px. |
+| **File Size & Conversion Details** | Preserve Transparency | When on, transparency is preserved in the output. When off (default), the alpha channel is stripped, which can reduce file size for images that do not need transparency. (Formerly labeled "Keep Alpha Channel".) |
+| **File Size & Conversion Details** | Fast Mode | Caps quality at 80. For AVIF, also forces the fastest encode speed (overriding Compression Level). Slightly larger files but visually indistinguishable from higher settings for most photos; recommended for large uncompressed sources (BMP, TIFF, TGA), batch processing, or when speed matters more than file size. |
+| **File Size & Conversion Details** | Target File Size | When enabled, quality is automatically adjusted via binary search to hit the target size in KB. Overrides the Quality slider. Useful for hitting a specific file size budget. |
+| **File Size & Conversion Details** | Conversion Timeout (sec) | Sets a manual time limit for each file's encoding step. 0 = automatic (90 s base + 15 s/MB for stills, 5 min for animated). Use this if a specific file consistently times out at the automatic limit. |
 
 ---
 
 <a id="changelog"></a>
 
-## 🆕 ChangeLog --> v5.2
+## 🆕 ChangeLog --> v5.3
+
+### Changes in v5.3 (September 2026)
+
+#### Live Preview
+
+- Added a **Live Preview** panel with a draggable before/after slider, positioned above the Settings/Diagnostics/Queue sections and expanded by default.
+- Renders a fast, downscaled encode of a still image against the current Settings, with roughly a quarter-second debounce as settings change — no full conversion required to see the effect of a slider or toggle.
+- Shows a bundled default sample image when no still is queued, so the slider is interactive immediately on load; automatically switches to the first queued still, and can be pointed at any other queued still by clicking it.
+- Displays an **Estimated File Size** label below the slider with the percent change from the original (e.g. `12.9 KB (↓ 93% from original 173.5 KB)`).
+- Uses a separate, isolated preview encoding engine (`previewClient.js`) so live-preview encodes never contend with the real queue's conversion engine.
+
+#### Settings Panel Reorganization
+
+- Split the right-hand Settings column into two distinct sections: **Image Dimensions** (No Resize, Max Height/Width Constraint) and **File Size & Conversion Details** (Preserve Transparency, Fast Mode, Target File Size, Conversion Timeout).
+- Renamed **"Do Not Change Dimensions"** to **No Resize**.
+- Renamed **"Keep Alpha Channel"** to **Preserve Transparency** for clarity.
+- Removed the WebP `compression_level` control's dead effect — Compression Level is now exclusively an AVIF setting; it remains visible but disabled when Format is WebP.
+- Fixed **Fast Mode** to correctly apply to AVIF conversions (previously it only affected WebP).
+
+#### Documentation
+
+- Documented a known metadata-preservation limitation in `Development.md`.
+
+---
 
 ### Changes in v5.2 (June 2026)
 
