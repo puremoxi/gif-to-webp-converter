@@ -118,7 +118,7 @@ That's it. No installation, no Node.js required.
   - Max Duration (sec): trims animated output to a set number of seconds. Applies to video, GIF, and APNG inputs.
 - Settings — Dimensions & File Size
   - Do Not Change Dimensions toggle
-  - Keep Alpha Channel toggle: preserves or strips transparency in the output.
+  - Preserve Transparency toggle: preserves or strips transparency in the output.
   - Max Height Constraint toggle + slider (px)
   - Max Width Constraint toggle + slider (px)
   - Target File Size toggle + slider (KB): auto-adjusts quality via binary search to hit the target. Overrides the quality slider.
@@ -233,7 +233,7 @@ Both outcomes are normal — Shrink Ray always reports the true sizes so you can
 | **Animated Output** | Max FPS | Caps the output frame rate for animated inputs (GIF, APNG, video). Reducing FPS is one of the most effective ways to reduce animated file size. Default: 24. |
 | **Animated Output** | Max Duration (sec) | Trims animated output to a maximum length in seconds. Useful for keeping looping GIFs short. Default: 3600 (effectively no limit). |
 | **Dimensions & File Size** | Do Not Change Dimensions | When on, the output is not resized regardless of Max Width or Max Height settings. |
-| **Dimensions & File Size** | Keep Alpha Channel | When on, transparency is preserved in the output. When off (default), the alpha channel is stripped, which can reduce file size for images that do not need transparency. |
+| **Dimensions & File Size** | Preserve Transparency | When on, transparency is preserved in the output. When off (default), the alpha channel is stripped, which can reduce file size for images that do not need transparency. |
 | **Dimensions & File Size** | Max Height Constraint | When enabled, the output is scaled down (maintaining aspect ratio) so its height does not exceed the slider value. Default: 1080 px. |
 | **Dimensions & File Size** | Max Width Constraint | When enabled (default), the output is scaled down (maintaining aspect ratio) so its width does not exceed the slider value. Default: 1200 px. |
 | **Dimensions & File Size** | Target File Size | When enabled, quality is automatically adjusted via binary search to hit the target size in KB. Overrides the Quality slider. Useful for hitting a specific file size budget. |
