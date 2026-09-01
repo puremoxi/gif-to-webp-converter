@@ -166,20 +166,35 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   }
   log(`Written to WASM FS as ${inputFs}`, 'info');
   const args=['-y','-threads','1'];
-  if(isVideoInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));
+  if(isAnimatedInput && !shouldStillEncode) args.push('-t', String(settings.maxDurationSec ?? 10));
   args.push('-i',inputFs,'-c:v', outputFormat === 'avif' ? 'libaom-av1' : 'libwebp');
 
   const wCap = !settings.noChangeDimensions && settings.maxWidthEnabled && Number.isFinite(settings.resizeWidth) && settings.resizeWidth > 0 ? Math.floor(settings.resizeWidth) : null;
   const hCap = !settings.noChangeDimensions && settings.maxHeightEnabled && Number.isFinite(settings.maxHeight) && settings.maxHeight > 0 ? Math.floor(settings.maxHeight) : null;
-  let vfFilter = null;
+  // [Stage 1 spike] Optional duplicate-frame removal, gated behind an experimental
+  // toggle (off by default, no effect on production behavior). Only meaningful for
+  // animated encodes — a no-op filter chain entry for stills would just waste a pass.
+  //
+  // IMPORTANT — measured, not assumed: mpdecimate BEFORE scale (the naively "cheaper"
+  // order, since dropped frames would skip scaling) was tested against a real ~4.7MB
+  // animated GIF fixture and blew through the full 300s exec timeout without finishing
+  // (ffmpeg.terminate() killed it well past 300s elapsed). The identical encode with
+  // mpdecimate AFTER scale completed in ~2.4s. Root cause not fully isolated (possibly
+  // the same class of WASM-SIMD-killing filter-ordering issue documented for v5.2 in
+  // CLAUDE.md), but the direction is unambiguous and reproducible — so scale runs first.
+  const useDedupe = !!settings.experimentalDedupe && isAnimatedInput && !shouldStillEncode;
+  const filterStages = [];
   if(wCap && hCap){
-    vfFilter = `scale=${wCap}:${hCap}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
+    filterStages.push(`scale=${wCap}:${hCap}:force_original_aspect_ratio=decrease`, `scale=trunc(iw/2)*2:trunc(ih/2)*2`);
   } else if(wCap){
-    vfFilter = `scale=${wCap}:-2:force_original_aspect_ratio=decrease`;
+    filterStages.push(`scale=${wCap}:-2:force_original_aspect_ratio=decrease`);
   } else if(hCap){
-    vfFilter = `scale=-2:${hCap}:force_original_aspect_ratio=decrease`;
+    filterStages.push(`scale=-2:${hCap}:force_original_aspect_ratio=decrease`);
   }
+  if(useDedupe) filterStages.push('mpdecimate');
+  const vfFilter = filterStages.length ? filterStages.join(',') : null;
   if(vfFilter) args.push('-vf', vfFilter);
+  if(useDedupe) log(`[experimental] mpdecimate enabled for this encode — vf: ${vfFilter}`, 'info');
 
   if(outputFormat === 'avif'){
     const crf = Math.round(63 - ((Number(settings.quality) || 90) * 0.63));
@@ -198,8 +213,8 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   } else {
     if(isVideoInput){
       args.push('-an');  // WebP has no audio — drop all audio streams to avoid mux error
-      args.push('-r', String(settings.maxFps ?? 15));
     }
+    args.push('-r', String(settings.maxFps ?? 15));
     // libwebp loop: 0=infinite, ≥1=play N times. -1 is invalid and causes encoder error.
     args.push('-loop', settings.loop ? '0' : '1');
   }
@@ -258,6 +273,7 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   const execTimeout = new Promise((_,reject) => {
     execTimerHandle = setTimeout(() => { try { ffmpeg.terminate?.(); } catch {} reject(execTimeoutErr); }, execTimeoutMs);
   });
+  const execStartMs = Date.now();
   try{
     const ret = await Promise.race([ffmpeg.exec(args), execTimeout]);
     if(typeof ret === 'number' && ret !== 0) {
@@ -278,10 +294,18 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
     try{ ffmpeg.off('progress',h);}catch{}
     try{ ffmpeg.off('log', ffLog);}catch{}
   }
+  const encodeMs = Date.now() - execStartMs;
   const data=await ffmpeg.readFile(outputFs);
   try{ await ffmpeg.deleteFile(inputFs);}catch{}
   try{ await ffmpeg.deleteFile(outputFs);}catch{}
-  return {name:outputName, blob:new Blob([data.buffer],{type: outputFormat === 'avif' ? 'image/avif' : 'image/webp'})};
+  const outBlob = new Blob([data.buffer],{type: outputFormat === 'avif' ? 'image/avif' : 'image/webp'});
+  if(useDedupe){
+    const beforeKB = (fileSizeBytes/1024).toFixed(1);
+    const afterKB = (outBlob.size/1024).toFixed(1);
+    const reduction = fileSizeBytes > 0 ? (100 * (1 - outBlob.size/fileSizeBytes)).toFixed(1) : '0.0';
+    log(`[experimental mpdecimate] ${originalName}: ${beforeKB} KB → ${afterKB} KB (↓ ${reduction}%)  encode time ${encodeMs} ms`, 'info');
+  }
+  return {name:outputName, blob: outBlob};
 }
 
 function _tagEngineDeadError(e) {

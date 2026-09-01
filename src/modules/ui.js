@@ -135,15 +135,12 @@ export function setupUI(dropzone, fileInput){
     const avifMode = outputFormat?.value === 'avif';
     if(avifMode) {
       loss.checked = false;
-      mix.checked = false;
       loop.checked = false;
     }
-    const lossLocked = loss.checked;
-    if(lossLocked) mix.checked = false;
-    lockEl(mix, mixedLabel, avifMode || lossLocked);
-    const mixLocked = mix.checked;
-    if(mixLocked) loss.checked = false;
-    lockEl(loss, losslessLabel, avifMode || mixLocked);
+    // Mixed Compression is not yet wired to the encoder — always disabled/unchecked.
+    mix.checked = false;
+    lockEl(mix, mixedLabel, true);
+    lockEl(loss, losslessLabel, avifMode);
     lockEl(loop, loopLabel, avifMode);
     syncCompressionLevel(avifMode);
     syncQuality();

@@ -259,6 +259,7 @@ function getSettings(){
     targetSizeKB,
     maxFps:         parseInt(document.getElementById('anim-max-fps')?.value,      10) || 24,
     maxDurationSec: parseInt(document.getElementById('anim-max-duration')?.value,  10) || 3600,
+    experimentalDedupe: document.getElementById('experimental-dedupe-toggle')?.checked ?? false,
   };
 }
 function syncActionButtonColor(btn) {
@@ -567,6 +568,7 @@ startBtn.addEventListener('click', async ()=>{
     s.still ? 'still' : 'animated',
     s.loop  ? 'loop'  : null,
     s.mixed ? 'mixed' : null,
+    s.experimentalDedupe ? 'experimentalDedupe' : null,
   ].filter(Boolean);
   log(`--- Batch start: ${queued} file(s)  [${flags.join('  ')}] ---`, 'info');
   try {

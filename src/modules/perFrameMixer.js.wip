@@ -1,4 +1,11 @@
-// src/modules/perFrameMixer.js
+// src/modules/perFrameMixer.js.wip
+// UNFINISHED, NON-FUNCTIONAL. Never imported anywhere in the codebase. Kept for
+// reference only as a prior attempt at per-frame lossy/lossless mixing (Stage 4
+// candidate in the frame-optimization plan). Contains real JS syntax errors
+// (Python-style `or`/`:`/`True`) and depends on a window.WebPMux global that
+// isn't bundled. Renamed with a .wip extension so it's out of the module
+// resolution path — do not import or "fix" this piecemeal.
+//
 // Experimental per-frame mixing using an optional WebPMux WASM binding.
 // Strategy:
 // 1) Extract frames to PNG

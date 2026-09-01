@@ -191,7 +191,7 @@
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Animation &amp; Mode</div>
             <label id="loop-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="loop-toggle" checked/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Loop Animation</span></label>
             <label id="lossless-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="lossless-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Lossless Compression</span></label>
-            <label id="mixed-label" class="inline-flex items-center gap-2"><input class="toggle-input" type="checkbox" id="mixed-toggle"/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Mixed Compression</span></label>
+            <label id="mixed-label" class="inline-flex items-center gap-2" title="Not yet implemented — has no effect on the encode"><input class="toggle-input" type="checkbox" id="mixed-toggle" disabled/><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span><span>Mixed Compression (not yet implemented)</span></label>
             <div style="height:1px;background:#334155;margin:6px 0;"></div>
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;padding-bottom:6px;border-bottom:1px solid #334155;">Animated Output</div>
             <label class="space-y-1">
@@ -274,6 +274,13 @@
             <button id="diag-clear" style="font-size:14px;font-weight:600;padding:8px 16px;border-radius:8px;background:rgba(51,65,85,0.7);border:1px solid #475569;color:#94a3b8;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Clear</button>
             <button id="diag-copy" style="font-size:14px;font-weight:600;padding:8px 16px;border-radius:8px;background:rgba(51,65,85,0.7);border:1px solid #475569;color:#94a3b8;cursor:pointer;transition:color 0.15s,border-color 0.15s;">Copy</button>
           </div>
+        </div>
+        <div class="mb-2">
+          <label id="experimental-dedupe-toggle-label" class="inline-flex items-center gap-2 text-sm" style="color:#475569;cursor:pointer;" title="Research spike (Stage 1): drops duplicate/near-duplicate frames before scaling on animated encodes. Not a shipped setting.">
+            <input class="toggle-input" type="checkbox" id="experimental-dedupe-toggle"/>
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+            <span>[Experimental] Dedupe frames (mpdecimate) — animated encodes only</span>
+          </label>
         </div>
         <div style="border:1px solid #334155;border-radius:8px;overflow:hidden;">
           <div id="diag-log" class="font-mono text-xs w-full" style="height:16rem;min-height:8rem;overflow-y:scroll;background:#0f172a;padding:12px;">
