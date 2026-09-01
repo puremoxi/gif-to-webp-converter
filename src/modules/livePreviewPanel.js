@@ -115,10 +115,7 @@ export function renderPreviewState(state) {
           ? `(\u2193 ${change.toFixed(0)}% from original)`
           : `(\u2191 ${Math.abs(change).toFixed(0)}% from original)`;
       }
-      sizeLabel.innerHTML = `
-        <div>Estimate: ${kb} KB${pctText ? ` <span style="font-size:11px;color:#64748b;">${pctText}</span>` : ''}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px;">(actual output may vary slightly)</div>
-      `;
+      sizeLabel.innerHTML = `<div>Estimate: ${kb} KB${pctText ? ` <span style="font-size:11px;color:#64748b;">${pctText}</span>` : ''}</div>`;
     }
   }
 }
