@@ -17,6 +17,7 @@ This file is for my own reference. It holds setup instructions, architectural de
 - [Additional Details](#additional-details)
   - [Tip: FFmpeg Load Progress](#ffmpeg-load-progress)
   - [Troubleshooting](#troubleshooting)
+  - [Known Limitations](#known-limitations)
   - [Self-hosted JSZip (CSP-safe)](#self-hosted-jszip)
   - [UI Extensions Module](#ui-extensions-module)
   - [CSP Notes](#csp-notes)
@@ -360,6 +361,12 @@ The top banner shows `ffmpeg-core.js`, `ffmpeg-core.wasm`, and `ffmpeg-core.work
 - If downloads fail: ensure JSZip is accessible from `vendor/jszip/`.
 - If presets fail to save: check the terminal output for `[presets] Storage directory:` to confirm the path, and verify the directory is writable. The Diagnostics panel will always show the full error from the server.
 - For performance testing, use Chrome or Edge with multi-thread WebAssembly enabled.
+
+<a id="known-limitations"></a>
+
+### Known Limitations
+
+- **No metadata preservation (EXIF/ICC/XMP).** Verified via `ffmpeg -h muxer=webp` — the vendored FFmpeg build's WebP muxer exposes exactly one private option (`-loop`); it has no metadata support at all, and `-map_metadata 0` was confirmed (via a real conversion round-trip with known EXIF tags) to have no effect. The AVIF path (`vendor/jsquash-avif`) is a JS/WASM encoder whose API has no metadata parameters either, and its input pipeline decodes the source through `createImageBitmap()` + canvas, which strips EXIF/ICC before the encoder ever sees the image. Preserving metadata would require manually splicing the original EXIF bytes into the output container after encoding (a WebP RIFF chunk or AVIF ISOBMFF box) — not currently implemented.
 
 <a id="self-hosted-jszip"></a>
 
