@@ -1,0 +1,59 @@
+<!--
+  THROWAWAY RESEARCH SPIKE HELPER — Stage 1 (mpdecimate benchmark).
+  Not wired into index.html, app.js, ui.js, or the Settings panel. Takes a
+  .webp file via the file input and decodes it back through FFmpeg-WASM
+  (-f null -) purely to read back the demuxer-reported Duration and the
+  decoded frame count from ffmpeg's own log/progress lines — used to verify
+  that mpdecimate doesn't change total animation duration or drop the
+  perceived frame count in a way that breaks playback. Safe to delete once
+  Stage 1's finding is written up.
+-->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>decode report</title></head>
+<body>
+<input type="file" id="f" accept="image/webp"/>
+<pre id="out">Waiting for file…</pre>
+<script src="/vendor/ffmpeg/ffmpeg.js"></script>
+<script>
+const out = document.getElementById('out');
+const lines = [];
+const print = (s) => { lines.push(s); out.textContent = lines.join('\n'); console.log(s); };
+
+document.getElementById('f').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  lines.length = 0;
+  print(`File: ${file.name}  (${(file.size/1024).toFixed(1)} KB)`);
+  try {
+    const g = window.FFmpeg || window.FFmpegWASM;
+    const ffmpeg = new g.FFmpeg();
+    const ffLines = [];
+    ffmpeg.on('log', ({ message }) => { if (message) ffLines.push(String(message)); });
+    await ffmpeg.load({
+      coreURL: '/vendor/ffmpeg/ffmpeg-core.js',
+      wasmURL: '/vendor/ffmpeg/ffmpeg-core.wasm',
+      workerURL: '/vendor/ffmpeg/ffmpeg-core.worker.js',
+    });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await ffmpeg.writeFile('in.webp', bytes);
+    ffLines.length = 0;
+    await ffmpeg.exec(['-i', 'in.webp', '-f', 'null', '-']);
+    const durLine = ffLines.find(l => /Duration:/.test(l));
+    const durMatch = durLine && durLine.match(/Duration:\s*([\d:.]+)/);
+    const frameLine = [...ffLines].reverse().find(l => /frame=\s*\d+/.test(l));
+    const frameMatch = frameLine && frameLine.match(/frame=\s*(\d+)/);
+    print(`Duration line: ${durLine || '(none found)'}`);
+    print(`Parsed duration: ${durMatch ? durMatch[1] : 'unknown'}`);
+    print(`Decoded frame count: ${frameMatch ? frameMatch[1] : 'unknown'}`);
+    print('--- full decode log ---');
+    ffLines.forEach(l => print('  ' + JSON.stringify(l)));
+    print('DONE');
+  } catch (err) {
+    print('FAILED: ' + (err?.message || err));
+    print('DONE');
+  }
+});
+</script>
+</body>
+</html>

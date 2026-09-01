@@ -1,0 +1,132 @@
+<!--
+  THROWAWAY SPIKE — Increment 2 fixture generator (WebPAnimEncoder benchmark).
+  Not wired into production. Synthesizes a "screen recording of a static UI"
+  clip: a mock text-editor window that is mostly pixel-identical frame to
+  frame, with a blinking text cursor (small region toggling every other
+  frame) and an occasional button hover-color change every ~1.5s. This is
+  the content type Stage 1 never tested and where a real WebPAnimEncoder
+  would be expected to show its biggest advantage over FFmpeg's per-frame
+  independent encode, via genuine cross-frame redundancy.
+
+  Not sourced from any third-party asset — generated procedurally via
+  Canvas 2D so provenance/licensing is a non-issue and it's reproducible.
+
+  Renders 80 frames at 10fps (8s) via Canvas 2D, feeds them to the same
+  FFmpeg-WASM engine the app already uses (/vendor/ffmpeg/ffmpeg.js) as a
+  PNG image2 sequence, and muxes to MP4 (libx264) so it drops into the
+  existing fixture set alongside the real GIF/APNG/MP4/WEBM/MOV files.
+-->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ui demo fixture generator</title></head>
+<body>
+<canvas id="c" width="640" height="400" style="border:1px solid #ccc"></canvas>
+<pre id="out">Generating…</pre>
+<script src="/vendor/ffmpeg/ffmpeg.js"></script>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  const lines = [];
+  const print = (s) => { lines.push(s); out.textContent = lines.join('\n'); console.log(s); };
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = 640, H = 400;
+  const FPS = 10;
+  const TOTAL_FRAMES = 80; // 8 seconds
+
+  const paragraph = [
+    'function shrinkImage(file) {',
+    '  const engine = loadEncoder();',
+    '  return engine.convert(file, {',
+    '    quality: 90,',
+    '  });',
+    '}',
+  ];
+
+  function drawFrame(frameIndex) {
+    // Window chrome (fully static every frame)
+    ctx.fillStyle = '#1e1e1e';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#2d2d2d';
+    ctx.fillRect(0, 0, W, 32);
+    ['#ff5f56', '#ffbd2e', '#27c93f'].forEach((c, i) => {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(20 + i * 20, 16, 6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Static code text
+    ctx.font = '16px monospace';
+    ctx.fillStyle = '#d4d4d4';
+    paragraph.forEach((line, i) => ctx.fillText(line, 24, 70 + i * 24));
+
+    // Blinking cursor: toggles every other frame — the ONLY thing that
+    // changes on most frames, a tiny region against an otherwise static
+    // canvas (classic screen-recording redundancy pattern).
+    if (frameIndex % 2 === 0) {
+      const cursorLine = 1; // after "const engine = loadEncoder();"
+      const cursorX = 24 + ctx.measureText(paragraph[cursorLine]).width + 4;
+      ctx.fillStyle = '#d4d4d4';
+      ctx.fillRect(cursorX, 70 + cursorLine * 24 - 14, 9, 18);
+    }
+
+    // Button that "hovers" (color change) roughly every 1.5s, simulating a
+    // mouse interaction — the other main source of real change in a UI demo.
+    const hoverPhase = Math.floor(frameIndex / 15) % 2 === 1;
+    ctx.fillStyle = hoverPhase ? '#3a8ee6' : '#2c72c7';
+    ctx.fillRect(24, H - 56, 120, 32);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Convert', 54, H - 35);
+  }
+
+  try {
+    const g = window.FFmpeg || window.FFmpegWASM;
+    const ffmpeg = new g.FFmpeg();
+    ffmpeg.on('log', ({ message }) => { if (message) console.log('[ffmpeg]', message); });
+    await ffmpeg.load({
+      coreURL: '/vendor/ffmpeg/ffmpeg-core.js',
+      wasmURL: '/vendor/ffmpeg/ffmpeg-core.wasm',
+      workerURL: '/vendor/ffmpeg/ffmpeg-core.worker.js',
+    });
+    print('FFmpeg-WASM loaded.');
+
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
+      drawFrame(i);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      await ffmpeg.writeFile(`frame_${String(i).padStart(4, '0')}.png`, bytes);
+    }
+    print(`Wrote ${TOTAL_FRAMES} PNG frames to WASM FS.`);
+
+    // NOTE: libx264 (encode) was tried first and hangs indefinitely after
+    // frame 1 in this FFmpeg-WASM core (confirmed via an isolated 5-frame
+    // test — "threads=2" internal lookahead threads, frozen at speed=0x).
+    // Unsurprising in hindsight: ShrinkRay has never encoded video before,
+    // only decoded it — h264 encode is genuinely unexercised code in this
+    // build. GIF output sidesteps it entirely and is itself a realistic
+    // real-world format for "UI demo" clips (READMEs, docs, bug reports).
+    const args = ['-y', '-threads', '1', '-framerate', String(FPS), '-i', 'frame_%04d.png', 'ui_demo.gif'];
+    print('ffmpeg ' + args.join(' '));
+    const ret = await ffmpeg.exec(args);
+    if (ret !== 0) throw new Error(`ffmpeg exited with code ${ret}`);
+
+    const data = await ffmpeg.readFile('ui_demo.gif');
+    const outBytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+    print(`Generated ui_demo.gif: ${(outBytes.length/1024).toFixed(1)} KB`);
+
+    // Expose as base64 on the page for the Node driver to pull out and save.
+    let binary = '';
+    for (let i = 0; i < outBytes.length; i++) binary += String.fromCharCode(outBytes[i]);
+    window.__uiDemoBase64 = btoa(binary);
+    print('DONE');
+  } catch (e) {
+    print('GENERATION FAILED: ' + (e?.stack || e?.message || e));
+    print('DONE');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!--
+  THROWAWAY RESEARCH SPIKE — Stage "WebPAnimEncoder vs FFmpeg" benchmark, Increment 1.
+  Not wired into index.html, app.js, ui.js, or the Settings panel.
+
+  Proves the wasm-webp module (https://github.com/nieyuyao/webp-wasm, MIT,
+  npm devDependency "wasm-webp") loads in-browser and produces a real,
+  valid multi-frame animated WebP via its actual WebPAnimEncoder binding
+  (confirmed by reading its C++ source: WebPAnimEncoderNew/Add/Assemble,
+  cumulative per-frame timestamps, per-frame WebPConfig). This increment
+  only proves the harness works end-to-end on synthetic frames — real
+  fixture-frame benchmarking against the FFmpeg path is a later increment.
+
+  Known limitation (confirmed by reading encode.cpp): WebPAnimEncoderOptions
+  is left at library defaults — minimize_size, allow_mixed, and loop_count
+  are NOT exposed to JS and cannot be toggled from this module.
+-->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>webp anim encoder spike</title></head>
+<body>
+<pre id="out">Running…</pre>
+<script type="module">
+  const out = document.getElementById('out');
+  const lines = [];
+  const print = (s) => { lines.push(s); out.textContent = lines.join('\n'); console.log(s); };
+
+  try {
+    // wasm-webp's published ESM build uses a bare relative specifier
+    // ("from './webp-wasm'") with no extension, which Node resolves but a
+    // browser's native ES module loader rejects (needs a real, resolvable
+    // URL). Patch it to an absolute path and load via a blob: module URL
+    // rather than touching node_modules — throwaway-spike-only workaround.
+    const rawSrc = await fetch('/node_modules/wasm-webp/dist/esm/index.js').then(r => r.text());
+    const webpWasmUrl = new URL('/node_modules/wasm-webp/dist/esm/webp-wasm.js', location.href).href;
+    const patchedSrc = rawSrc.replace("from './webp-wasm'", `from '${webpWasmUrl}'`);
+    const blobUrl = URL.createObjectURL(new Blob([patchedSrc], { type: 'text/javascript' }));
+    const { encoderVersion, encodeAnimation } = await import(blobUrl);
+
+    const version = await encoderVersion();
+    print(`libwebp encoder version (via wasm-webp): ${version}`);
+
+    // Synthetic 4x4 RGBA test animation: 3 frames, alternating solid colors,
+    // so a real encoder easily tells them apart (this is not a size benchmark,
+    // just a correctness check that encode->valid container round-trips).
+    const W = 4, H = 4;
+    const solidFrame = (r, g, b) => {
+      const buf = new Uint8Array(W * H * 4);
+      for (let i = 0; i < W * H; i++) {
+        buf[i*4+0] = r; buf[i*4+1] = g; buf[i*4+2] = b; buf[i*4+3] = 255;
+      }
+      return buf;
+    };
+    const frames = [
+      { data: solidFrame(255, 0, 0), duration: 100 },
+      { data: solidFrame(0, 255, 0), duration: 150 },
+      { data: solidFrame(0, 0, 255), duration: 200 },
+    ];
+
+    const t0 = performance.now();
+    const encoded = await encodeAnimation(W, H, true, frames);
+    const encodeMs = performance.now() - t0;
+
+    if (!encoded) throw new Error('encodeAnimation returned null');
+    print(`Encoded ${encoded.length} bytes in ${encodeMs.toFixed(1)} ms`);
+
+    // Validate container: RIFF....WEBP, and look for ANIM/ANMF chunk markers
+    // (ISOBMFF-style RIFF chunk FourCCs are raw ASCII in the byte stream).
+    const head = new TextDecoder('latin1').decode(encoded.slice(0, 16));
+    const isRiffWebp = encoded[0]===0x52 && encoded[1]===0x49 && encoded[2]===0x46 && encoded[3]===0x46
+      && encoded[8]===0x57 && encoded[9]===0x45 && encoded[10]===0x42 && encoded[11]===0x50;
+    const full = new TextDecoder('latin1').decode(encoded);
+    const hasAnim = full.includes('ANIM');
+    const anmfCount = (full.match(/ANMF/g) || []).length;
+
+    print(`RIFF/WEBP header valid: ${isRiffWebp}`);
+    print(`Contains ANIM chunk (animated container): ${hasAnim}`);
+    print(`ANMF (frame) chunk count found: ${anmfCount}  (expected 3)`);
+    print(`\nHARNESS STATUS: ${isRiffWebp && hasAnim && anmfCount === 3 ? 'WORKING' : 'FAILED — see above'}`);
+    print('DONE');
+  } catch (e) {
+    print('SPIKE FAILED: ' + (e?.stack || e?.message || e));
+    print('DONE');
+  }
+</script>
+</body>
+</html>
