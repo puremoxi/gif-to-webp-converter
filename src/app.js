@@ -230,7 +230,7 @@ function syncOutputFormatAvailability() {
   updateControls();
 }
 function getSettings(){
-  const maxWidthEnabled = document.getElementById('max-width-toggle')?.checked ?? true;
+  const maxWidthEnabled = document.getElementById('max-width-toggle')?.checked ?? false;
   const resizeWidthRaw = parseInt(document.getElementById('resize-width')?.value, 10);
   const resizeWidth = Number.isFinite(resizeWidthRaw) && resizeWidthRaw > 0 ? resizeWidthRaw : null;
   const maxHeightEnabled = document.getElementById('max-height-toggle')?.checked ?? false;
@@ -239,6 +239,9 @@ function getSettings(){
   const targetSizeEnabled = document.getElementById('target-size-toggle')?.checked ?? false;
   const targetSizeKBRaw = parseInt(document.getElementById('target-size-kb')?.value, 10);
   const targetSizeKB = Number.isFinite(targetSizeKBRaw) && targetSizeKBRaw > 0 ? targetSizeKBRaw : null;
+  const percentageResizeEnabled = document.getElementById('percentage-resize-toggle')?.checked ?? false;
+  const resizePercentageRaw = parseInt(document.getElementById('percentage-resize')?.value, 10);
+  const resizePercentage = Number.isFinite(resizePercentageRaw) && resizePercentageRaw > 0 ? resizePercentageRaw : 100;
   return {
     outputFolderMode: document.getElementById('output-folder-mode')?.value || 'source',
     outputFormat: document.getElementById('output-format')?.value || 'webp',
@@ -252,7 +255,9 @@ function getSettings(){
     mixed: document.getElementById('mixed-toggle').checked,
     maxWidthEnabled,
     resizeWidth,
-    noChangeDimensions: document.getElementById('no-change-dimensions-toggle')?.checked ?? false,
+    noChangeDimensions: document.getElementById('no-change-dimensions-toggle')?.checked ?? true,
+    percentageResizeEnabled,
+    resizePercentage,
     maxHeightEnabled,
     maxHeight,
     targetSizeEnabled,
@@ -564,6 +569,7 @@ startBtn.addEventListener('click', async ()=>{
     s.maxWidthEnabled && s.resizeWidth  ? `maxW=${s.resizeWidth}`  : null,
     s.maxHeightEnabled && s.maxHeight   ? `maxH=${s.maxHeight}`    : null,
     s.targetSizeEnabled && s.targetSizeKB ? `targetSize=${s.targetSizeKB}KB` : null,
+    s.percentageResizeEnabled && s.resizePercentage < 100 ? `resizePct=${s.resizePercentage}%` : null,
     s.noChangeDimensions ? 'no-resize' : null,
     s.still ? 'still' : 'animated',
     s.loop  ? 'loop'  : null,

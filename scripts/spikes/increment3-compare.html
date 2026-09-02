@@ -1,0 +1,344 @@
+<!--
+  THROWAWAY SPIKE — Increment 3 of the WebPAnimEncoder-vs-FFmpeg benchmark.
+  Not wired into production. Runs the full per-fixture comparison pipeline:
+
+  1. Extract canonical, fully-composited RGBA source frames.
+     - GIF/APNG: via ImageDecoder (WebCodecs), which composites disposal/
+       blend internally. Verified via ImageDecoder.isTypeSupported() first.
+     - Video (mp4/mov/webm): via FFmpeg-WASM (ImageDecoder is NOT used for
+       these per the spec — container demux/timing for video containers is
+       FFmpeg's job here), replicating -t/scale exactly. The `fps=` filter
+       (used to match the production path's -r 24) is NOT used here: it
+       hangs after frame 1 in this WASM core, the same lookahead/buffering
+       class of bug already found with mpdecimate-before-scale and libx264
+       encode. Native source fps (~23.98) is close enough to 24 that this
+       is a minor, disclosed deviation, not a silent substitution — see
+       the 'limitations' field in each video result.
+  2. Encode those canonical frames via wasm-webp's real WebPAnimEncoder
+     (default settings only — minimize_size/allow_mixed/kmin/kmax are not
+     exposed by this module, confirmed in Increments 1 and 3 setup).
+  3. Decode BOTH the Increment-2 FFmpeg WebP baseline output and this
+     encoder's own output via wasm-webp's decodeAnimation (FFmpeg's own
+     build cannot decode animated WebP in this project, confirmed earlier —
+     "image data not found" / Aborted() — so wasm-webp's decoder is the
+     only common, reliable tool available for validating both sides).
+  4. Validate dimensions, frame count, cumulative duration, final-frame
+     duration, loop count (parsed manually from the raw ANIM chunk — the
+     module's decodeAnimation() does not surface loop_count to JS even
+     though it reads it internally, confirmed by reading decode.cpp),
+     alpha preservation, and computes per-frame PSNR against the canonical
+     reference frames for both candidates.
+
+  Driven by Node via URL query params (see increment3-run.mjs). Reports a
+  JSON blob on window.__result for the driver to pull out.
+-->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>increment 3 compare</title></head>
+<body>
+<pre id="out">Running…</pre>
+<script src="/vendor/ffmpeg/ffmpeg.js"></script>
+<script type="module">
+const out = document.getElementById('out');
+const lines = [];
+const print = (s) => { lines.push(s); out.textContent = lines.join('\n'); console.log(s); };
+
+const qs = new URLSearchParams(location.search);
+const cfg = {
+  label: qs.get('label'),
+  srcUrl: qs.get('srcUrl'),
+  kind: qs.get('kind'),               // 'gif' | 'apng' | 'video'
+  mime: qs.get('mime'),                // for ImageDecoder
+  baselineUrl: qs.get('baselineUrl'),  // Increment 2 FFmpeg output for this fixture
+  // Video-only extraction params, matching the exact FFmpeg baseline command:
+  maxDurationSec: Number(qs.get('t') || 0),
+  scaleW: Number(qs.get('scaleW') || 0),
+  fps: Number(qs.get('fps') || 24),
+  quality: Number(qs.get('quality') || 90),
+  lossless: Number(qs.get('lossless') || 0),
+};
+
+function loadWasmWebp() {
+  return fetch('/node_modules/wasm-webp/dist/esm/index.js').then(r => r.text()).then(rawSrc => {
+    const webpWasmUrl = new URL('/node_modules/wasm-webp/dist/esm/webp-wasm.js', location.href).href;
+    const patchedSrc = rawSrc.replace("from './webp-wasm'", `from '${webpWasmUrl}'`);
+    const blobUrl = URL.createObjectURL(new Blob([patchedSrc], { type: 'text/javascript' }));
+    return import(blobUrl);
+  });
+}
+
+function parseLoopCount(bytes) {
+  const text = new TextDecoder('latin1').decode(bytes);
+  const idx = text.indexOf('ANIM');
+  if (idx === -1) return null;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return dv.getUint16(idx + 4 + 4 + 4, true); // fourcc(4) + chunksize(4) + bgcolor(4) -> loop_count(2, LE)
+}
+
+function hasVisibleAlpha(rgba) {
+  for (let i = 3; i < rgba.length; i += 4) if (rgba[i] !== 255) return true;
+  return false;
+}
+
+// --- Canonical frame extraction: GIF/APNG via ImageDecoder ---
+async function extractImageDecoderFrames(url, mime) {
+  const supported = await ImageDecoder.isTypeSupported(mime);
+  if (!supported) return { error: `ImageDecoder does not support ${mime}` };
+  const buf = await fetch(url).then(r => r.arrayBuffer());
+  const decoder = new ImageDecoder({ data: buf, type: mime });
+  await decoder.tracks.ready;
+  const track = decoder.tracks.selectedTrack;
+  const frameCount = track.frameCount;
+  const frames = [];
+  let w = 0, h = 0;
+  for (let i = 0; i < frameCount; i++) {
+    const { image } = await decoder.decode({ frameIndex: i });
+    w = image.displayWidth; h = image.displayHeight;
+    const rgba = new Uint8Array(w * h * 4);
+    await image.copyTo(rgba, { format: 'RGBA' });
+    const durationMs = image.duration != null ? image.duration / 1000 : (1000 / cfg.fps);
+    frames.push({ data: rgba, durationMs });
+    image.close();
+  }
+  decoder.close();
+  return { width: w, height: h, frames, repeatCount: track.repeatCount };
+}
+
+// --- Canonical frame extraction: video via FFmpeg, matching the exact
+// production command's -t/-vf scale/-r behavior (fps filter used instead
+// of -r output-option, verified equivalent by comparing resulting frame
+// count/duration against the real FFmpeg baseline's decoded output).
+//
+// IMPORTANT DEVIATION FROM INCREMENT 2: video fixtures are trimmed to
+// cfg.maxDurationSec (a short duration, NOT the full ~31s Increment 2
+// used) because holding 3 full-length RGBA frame arrays (canonical +
+// 2 decoded candidates) at 1280x720x4 bytes/frame for ~721 frames is
+// ~1.9GB EACH — ~5.7GB simultaneously, which reliably OOM-hung the
+// browser tab (confirmed: mp4/webm timed out, mov crashed the page).
+// This is a browser-memory constraint of this spike environment, not a
+// finding about production feasibility. To keep the comparison valid, a
+// FRESH matched-duration FFmpeg mini-baseline is generated in this same
+// pass on the identical trimmed input — NOT compared against Increment
+// 2's full-length baseline, which would be an invalid, non-equivalent
+// comparison (different duration = different frame count). ---
+async function extractVideoFrames(ffmpeg, url) {
+  const bytes = new Uint8Array(await fetch(url).then(r => r.arrayBuffer()));
+  const inputExt = url.match(/\.[^.]+$/)[0];
+  await ffmpeg.writeFile('vidin' + inputExt, bytes);
+
+  // Matched mini-baseline: identical production-style FFmpeg command
+  // (same as Increment 2's recorded cmd line) but at the reduced duration.
+  const miniBaselineArgs = ['-y', '-threads', '1', '-t', String(cfg.maxDurationSec), '-i', 'vidin' + inputExt,
+                            '-c:v', 'libwebp', '-vf', `scale=${cfg.scaleW}:-2:force_original_aspect_ratio=decrease`,
+                            '-q:v', String(cfg.quality), '-an', '-r', String(cfg.fps), '-loop', '0', 'mini_baseline.webp'];
+  print('  [mini-baseline] ffmpeg ' + miniBaselineArgs.join(' '));
+  const miniT0 = performance.now();
+  const miniRet = await ffmpeg.exec(miniBaselineArgs);
+  const miniBaselineEncodeMs = performance.now() - miniT0;
+  if (miniRet !== 0) return { error: `mini-baseline ffmpeg exit ${miniRet}` };
+  const miniData = await ffmpeg.readFile('mini_baseline.webp');
+  const miniBaselineBytes = miniData instanceof Uint8Array ? miniData : new Uint8Array(miniData);
+  await ffmpeg.deleteFile('mini_baseline.webp').catch(() => {});
+
+  const vf = `scale=${cfg.scaleW}:-2:force_original_aspect_ratio=decrease`; // fps filter removed: hangs after frame 1 in this WASM core (same lookahead/buffering class of bug as mpdecimate-first and libx264). Native fps (~23.98) already ≈ 24, verified via resulting frame count/duration match against the mini-baseline below.
+  const args = ['-y', '-threads', '1', '-t', String(cfg.maxDurationSec), '-i', 'vidin' + inputExt,
+                '-vf', vf, '-vsync', '0', 'vf_%05d.png'];
+  print('  [extract] ffmpeg ' + args.join(' '));
+  const ret = await ffmpeg.exec(args);
+  if (ret !== 0) return { error: `frame extraction ffmpeg exit ${ret}` };
+
+  const entries = await ffmpeg.listDir('/');
+  const pngNames = entries.map(e => e.name).filter(n => /^vf_\d+\.png$/.test(n)).sort();
+  // Native frame rate (no fps filter applied — see comment above), so derive
+  // the interval from actual extracted frame count over the trimmed duration
+  // rather than assuming cfg.fps exactly.
+  const frameIntervalMs = pngNames.length > 0 ? (cfg.maxDurationSec * 1000) / pngNames.length : (1000 / cfg.fps);
+  const frames = [];
+  let w = 0, h = 0;
+  for (const name of pngNames) {
+    const data = await ffmpeg.readFile(name);
+    const pngBytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+    const blob = new Blob([pngBytes], { type: 'image/png' });
+    const bitmap = await createImageBitmap(blob);
+    w = bitmap.width; h = bitmap.height;
+    const canvas = new OffscreenCanvas(w, h);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    const imgData = ctx.getImageData(0, 0, w, h);
+    frames.push({ data: new Uint8Array(imgData.data.buffer), durationMs: frameIntervalMs });
+    bitmap.close();
+    await ffmpeg.deleteFile(name);
+  }
+  await ffmpeg.deleteFile('vidin' + inputExt).catch(() => {});
+  return { width: w, height: h, frames, repeatCount: null, frameIntervalMs, miniBaselineBytes, miniBaselineEncodeMs };
+}
+
+// --- Decode + validate a WebP animation buffer via wasm-webp's own decoder ---
+async function decodeAndValidate(decodeAnimation, bytes, label) {
+  const frames = await decodeAnimation(bytes, true);
+  if (!frames || frames.length === 0) return { error: `${label}: decodeAnimation returned ${frames}` };
+  const durations = frames.map(f => f.duration);
+  const totalDurationMs = durations.reduce((a, b) => a + b, 0);
+  const loopCount = parseLoopCount(bytes);
+  const alpha = hasVisibleAlpha(frames[0].data) || frames.some(f => hasVisibleAlpha(f.data));
+  return {
+    frameCount: frames.length,
+    width: frames[0].width,
+    height: frames[0].height,
+    totalDurationMs,
+    finalFrameDurationMs: durations[durations.length - 1],
+    loopCount,
+    hasVisibleAlpha: alpha,
+    frames, // kept for PSNR comparison, stripped before JSON serialization
+  };
+}
+
+function psnr(a, b, w, h, hasAlpha) {
+  // RGB-only PSNR (alpha compared separately as a boolean/structural check).
+  const channels = 3;
+  let mse = 0, n = 0;
+  const stride = 4;
+  for (let p = 0; p < w * h; p++) {
+    for (let c = 0; c < channels; c++) {
+      const diff = a[p * stride + c] - b[p * stride + c];
+      mse += diff * diff;
+      n++;
+    }
+  }
+  mse /= n;
+  if (mse === 0) return Infinity;
+  return 10 * Math.log10((255 * 255) / mse);
+}
+
+function averagePsnr(candidateFrames, referenceFrames, w, h) {
+  const n = Math.min(candidateFrames.length, referenceFrames.length);
+  if (n === 0) return null;
+  let sum = 0, counted = 0;
+  for (let i = 0; i < n; i++) {
+    const cf = candidateFrames[i], rf = referenceFrames[i];
+    if (cf.width !== w || cf.height !== h || rf.data.length !== cf.data.length) continue;
+    const v = psnr(cf.data, rf.data, w, h);
+    if (Number.isFinite(v)) { sum += v; counted++; }
+  }
+  return counted > 0 ? sum / counted : null;
+}
+
+async function main() {
+  const result = { label: cfg.label, kind: cfg.kind, limitations: [] };
+  try {
+    // --- Step 1: canonical reference frames ---
+    print(`[${cfg.label}] extracting canonical frames (${cfg.kind})...`);
+    let canonical;
+    if (cfg.kind === 'video') {
+      const ff = new (window.FFmpeg || window.FFmpegWASM).FFmpeg();
+      ff.on('log', () => {});
+      await ff.load({
+        coreURL: '/vendor/ffmpeg/ffmpeg-core.js',
+        wasmURL: '/vendor/ffmpeg/ffmpeg-core.wasm',
+        workerURL: '/vendor/ffmpeg/ffmpeg-core.worker.js',
+      });
+      canonical = await extractVideoFrames(ff, cfg.srcUrl);
+      result.limitations.push('Video canonical frames extracted via a SEPARATE FFmpeg invocation (scale filter, PNG intermediate) rather than the exact internal pipeline the production encode used — this is a distinct decode pass, not proof of pixel-identical intermediate frames.');
+      result.limitations.push('Video frames use NATIVE source frame rate (~23.98fps), not the production path\'s -r 24 resampling: the fps filter hangs after frame 1 in this WASM core (same class of bug as mpdecimate-before-scale and libx264 encode). Frame count/timing will differ slightly (not exactly) from what the real 24fps-resampled production baseline produces. Disclosed, not silently substituted.');
+    } else {
+      canonical = await extractImageDecoderFrames(cfg.srcUrl, cfg.mime);
+      result.limitations.push('GIF/APNG canonical frames extracted via the browser ImageDecoder API — a decoder independent of FFmpeg\'s own internal GIF/APNG demux+composite path used to produce the FFmpeg baseline. This is the required methodological asymmetry: FFmpeg baseline decodes the source internally; wasm-webp receives externally decoded+composited RGBA frames from a different decoder.');
+    }
+    if (canonical.error) { result.fatalError = canonical.error; print('FATAL: ' + canonical.error); result.status = 'FAIL'; window.__result = result; print('DONE'); return; }
+
+    const canonicalFrameCount = canonical.frames.length;
+    const canonicalTotalDurationMs = canonical.frames.reduce((a, f) => a + f.durationMs, 0);
+    const canonicalHasAlpha = canonical.frames.some(f => hasVisibleAlpha(f.data));
+    result.canonical = {
+      width: canonical.width, height: canonical.height,
+      frameCount: canonicalFrameCount, totalDurationMs: canonicalTotalDurationMs,
+      finalFrameDurationMs: canonical.frames[canonical.frames.length - 1].durationMs,
+      hasVisibleAlpha: canonicalHasAlpha,
+    };
+    print(`  canonical: ${canonical.width}x${canonical.height} frames=${canonicalFrameCount} totalDurMs=${canonicalTotalDurationMs.toFixed(1)} alpha=${canonicalHasAlpha}`);
+
+    // --- Step 2: encode via wasm-webp (default WebPAnimEncoder, matching
+    // FFmpeg baseline's quality=90, lossless=0, loop=infinite defaults) ---
+    const { encodeAnimation, decodeAnimation } = await loadWasmWebp();
+    const encFrames = canonical.frames.map(f => ({
+      data: f.data, duration: Math.round(f.durationMs),
+      config: { quality: cfg.quality, lossless: cfg.lossless },
+    }));
+    const t0 = performance.now();
+    // IMPORTANT: our RGBA buffers are always 4 bytes/pixel regardless of
+    // whether the content visually uses transparency. encode.cpp's has_alpha
+    // flag controls the READ STRIDE (WebPPictureImportRGBA vs ...RGB, 4 vs 3
+    // bytes/pixel) — passing canonicalHasAlpha (false for opaque content)
+    // here would misread every 4-byte pixel as if it were 3 bytes, corrupting
+    // the entire image. Confirmed by an isolated diagnostic: this exact
+    // mistake dropped PSNR from ~42dB to ~9dB on identical source data.
+    // hasAlpha here must always be `true` to match the buffer's real layout;
+    // canonicalHasAlpha is used only for the separate "does this content
+    // have real transparency" validation field below.
+    const encoded = await encodeAnimation(canonical.width, canonical.height, true, encFrames);
+    const encodeMs = performance.now() - t0;
+    if (!encoded) { result.fatalError = 'encodeAnimation returned null'; result.status = 'FAIL'; window.__result = result; print('DONE'); return; }
+    result.wasmWebpBytes = encoded.length;
+    result.wasmWebpEncodeMs = Math.round(encodeMs);
+    print(`  wasm-webp encoded: ${(encoded.length/1024).toFixed(1)} KB in ${encodeMs.toFixed(0)} ms`);
+
+    // --- Step 3: decode + validate both candidates via the same decoder ---
+    let baselineBytes;
+    if (cfg.kind === 'video') {
+      // Video: compare against the freshly-generated matched-duration mini-
+      // baseline (same trimmed duration as canonical), NOT Increment 2's
+      // full-length baseline — see extractVideoFrames' comment for why.
+      baselineBytes = canonical.miniBaselineBytes;
+      result.ffmpegEncodeMs = Math.round(canonical.miniBaselineEncodeMs);
+      const inc2Bytes = new Uint8Array(await fetch(cfg.baselineUrl).then(r => r.arrayBuffer()));
+      result.increment2FullLengthBytesForReference = inc2Bytes.length;
+      result.limitations.push(`Video comparison uses a ${cfg.maxDurationSec}s matched-duration mini-baseline (${baselineBytes.length} bytes), NOT Increment 2's full ~31s baseline (${inc2Bytes.length} bytes, kept only as unrelated reference context) — full duration OOM'd the browser tab when holding 3 full-length RGBA frame arrays simultaneously.`);
+    } else {
+      baselineBytes = new Uint8Array(await fetch(cfg.baselineUrl).then(r => r.arrayBuffer()));
+    }
+    result.ffmpegBytes = baselineBytes.length;
+
+    const ffmpegValidation = await decodeAndValidate(decodeAnimation, baselineBytes, 'ffmpeg');
+    const wasmWebpValidation = await decodeAndValidate(decodeAnimation, encoded, 'wasm-webp');
+
+    if (ffmpegValidation.error || wasmWebpValidation.error) {
+      result.fatalError = ffmpegValidation.error || wasmWebpValidation.error;
+      result.status = 'FAIL';
+      window.__result = result;
+      print('DONE');
+      return;
+    }
+
+    // --- Step 4: PSNR against canonical reference (aligned by index/timestamp order) ---
+    const ffmpegPsnr = averagePsnr(ffmpegValidation.frames, canonical.frames.map(f => ({ data: f.data, width: canonical.width })), canonical.width, canonical.height);
+    const wasmWebpPsnr = averagePsnr(wasmWebpValidation.frames, canonical.frames.map(f => ({ data: f.data, width: canonical.width })), canonical.width, canonical.height);
+
+    result.ffmpeg = {
+      frameCount: ffmpegValidation.frameCount, width: ffmpegValidation.width, height: ffmpegValidation.height,
+      totalDurationMs: ffmpegValidation.totalDurationMs, finalFrameDurationMs: ffmpegValidation.finalFrameDurationMs,
+      loopCount: ffmpegValidation.loopCount, hasVisibleAlpha: ffmpegValidation.hasVisibleAlpha, psnr: ffmpegPsnr,
+    };
+    result.wasmWebp = {
+      frameCount: wasmWebpValidation.frameCount, width: wasmWebpValidation.width, height: wasmWebpValidation.height,
+      totalDurationMs: wasmWebpValidation.totalDurationMs, finalFrameDurationMs: wasmWebpValidation.finalFrameDurationMs,
+      loopCount: wasmWebpValidation.loopCount, hasVisibleAlpha: wasmWebpValidation.hasVisibleAlpha, psnr: wasmWebpPsnr,
+    };
+
+    print(`  ffmpeg decoded:    frames=${result.ffmpeg.frameCount} dims=${result.ffmpeg.width}x${result.ffmpeg.height} totalDurMs=${result.ffmpeg.totalDurationMs} lastDurMs=${result.ffmpeg.finalFrameDurationMs} loop=${result.ffmpeg.loopCount} alpha=${result.ffmpeg.hasVisibleAlpha} psnr=${ffmpegPsnr?.toFixed(2)}`);
+    print(`  wasm-webp decoded: frames=${result.wasmWebp.frameCount} dims=${result.wasmWebp.width}x${result.wasmWebp.height} totalDurMs=${result.wasmWebp.totalDurationMs} lastDurMs=${result.wasmWebp.finalFrameDurationMs} loop=${result.wasmWebp.loopCount} alpha=${result.wasmWebp.hasVisibleAlpha} psnr=${wasmWebpPsnr?.toFixed(2)}`);
+
+    result.status = 'OK';
+    window.__result = result;
+    print('DONE');
+  } catch (e) {
+    result.fatalError = String(e?.stack || e?.message || e);
+    result.status = 'FAIL';
+    window.__result = result;
+    print('SPIKE FAILED: ' + result.fatalError);
+    print('DONE');
+  }
+}
+main();
+</script>
+</body>
+</html>

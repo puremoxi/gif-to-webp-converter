@@ -10,9 +10,11 @@ export const DEFAULT_PRESET = {
   execTimeoutSec: 0,
   lossless: false,
   mixed: false,
-  maxWidthEnabled: true,
+  maxWidthEnabled: false,
   resizeWidth: 1200,
-  noChangeDimensions: false,
+  noChangeDimensions: true,
+  percentageResizeEnabled: false,
+  resizePercentage: 100,
   maxHeightEnabled: false,
   maxHeight: 1080,
   targetSizeEnabled: false,
@@ -89,12 +91,14 @@ export function applyPreset(settings) {
   setSlider('exec-timeout-slider', 'exec-timeout-sec', settings.execTimeoutSec ?? 0);
 
   // Dimensions — ncd must change before dependent toggles
-  setCheckbox('no-change-dimensions-toggle', settings.noChangeDimensions ?? false, true);
-  setCheckbox('max-width-toggle', settings.maxWidthEnabled ?? true, true);
+  setCheckbox('no-change-dimensions-toggle', settings.noChangeDimensions ?? true, true);
+  setCheckbox('percentage-resize-toggle', settings.percentageResizeEnabled ?? false, true);
+  setCheckbox('max-width-toggle', settings.maxWidthEnabled ?? false, true);
   setCheckbox('max-height-toggle', settings.maxHeightEnabled ?? false, true);
   setCheckbox('target-size-toggle', settings.targetSizeEnabled ?? false, true);
 
   setSlider('resize-width', 'resize-width-value', settings.resizeWidth ?? 1200);
   setSlider('resize-height', 'resize-height-value', settings.maxHeight ?? 1080);
+  setSlider('percentage-resize', 'percentage-resize-value', settings.resizePercentage ?? 100);
   setSlider('target-size-kb', 'target-size-value', settings.targetSizeKB ?? 200);
 }

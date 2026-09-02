@@ -171,6 +171,12 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
 
   const wCap = !settings.noChangeDimensions && settings.maxWidthEnabled && Number.isFinite(settings.resizeWidth) && settings.resizeWidth > 0 ? Math.floor(settings.resizeWidth) : null;
   const hCap = !settings.noChangeDimensions && settings.maxHeightEnabled && Number.isFinite(settings.maxHeight) && settings.maxHeight > 0 ? Math.floor(settings.maxHeight) : null;
+  // Percentage Resize: mutually exclusive with wCap/hCap in the UI (ui.js locks
+  // them against each other). 100 (or unset) means N/A — no scaling, so only
+  // treat this as active below 100, matching "the tool only offers size decrease."
+  const resizeFactor = !settings.noChangeDimensions && settings.percentageResizeEnabled
+    && Number.isFinite(settings.resizePercentage) && settings.resizePercentage > 0 && settings.resizePercentage < 100
+    ? settings.resizePercentage / 100 : null;
   // [Stage 1 spike] Optional duplicate-frame removal, gated behind an experimental
   // toggle (off by default, no effect on production behavior). Only meaningful for
   // animated encodes — a no-op filter chain entry for stills would just waste a pass.
@@ -184,7 +190,9 @@ async function _doConvertImage(ffmpeg,file,settings,onProgress){
   // CLAUDE.md), but the direction is unambiguous and reproducible — so scale runs first.
   const useDedupe = !!settings.experimentalDedupe && isAnimatedInput && !shouldStillEncode;
   const filterStages = [];
-  if(wCap && hCap){
+  if(resizeFactor){
+    filterStages.push(`scale=trunc(iw*${resizeFactor}/2)*2:trunc(ih*${resizeFactor}/2)*2`);
+  } else if(wCap && hCap){
     filterStages.push(`scale=${wCap}:${hCap}:force_original_aspect_ratio=decrease`, `scale=trunc(iw/2)*2:trunc(ih/2)*2`);
   } else if(wCap){
     filterStages.push(`scale=${wCap}:-2:force_original_aspect_ratio=decrease`);

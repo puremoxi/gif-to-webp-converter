@@ -13,6 +13,8 @@ export function setupUI(dropzone, fileInput){
   const resizeWidthLabel=document.getElementById('resize-width-label');
   const maxWidthToggle=document.getElementById('max-width-toggle'), maxWidthToggleLabel=document.getElementById('max-width-toggle-label');
   const maxHeightToggle=document.getElementById('max-height-toggle'), maxHeightToggleLabel=document.getElementById('max-height-toggle-label');
+  const percentageResizeToggle=document.getElementById('percentage-resize-toggle'), percentageResizeToggleLabel=document.getElementById('percentage-resize-toggle-label');
+  const percentageResize=document.getElementById('percentage-resize'), percentageResizeVal=document.getElementById('percentage-resize-value'), percentageResizeLabel=document.getElementById('percentage-resize-label');
   const resizeHeight=document.getElementById('resize-height'), resizeHeightLabel=document.getElementById('resize-height-label');
   const resizeHeightVal=document.getElementById('resize-height-value'), resizeWidthVal=document.getElementById('resize-width-value');
   const targetSizeToggle=document.getElementById('target-size-toggle'), targetSizeToggleLabel=document.getElementById('target-size-toggle-label');
@@ -51,6 +53,7 @@ export function setupUI(dropzone, fileInput){
   syncSliderAndValue(cl, clv);
   syncSliderAndValue(resizeHeight, resizeHeightVal);
   syncSliderAndValue(resizeWidth, resizeWidthVal);
+  syncSliderAndValue(percentageResize, percentageResizeVal);
   syncSliderAndValue(targetSizeKb, targetSizeVal);
   syncSliderAndValue(document.getElementById('anim-max-fps'), document.getElementById('anim-max-fps-value'));
   syncSliderAndValue(document.getElementById('anim-max-duration'), document.getElementById('anim-max-duration-value'));
@@ -71,27 +74,40 @@ export function setupUI(dropzone, fileInput){
   function syncNCD(){
     syncMaxWidth();
     syncMaxHeight();
+    syncPercentageResize();
   }
   function syncMaxWidth(){
-    const ncdLocked = ncd?.checked;
-    if(maxWidthToggle) maxWidthToggle.disabled = ncdLocked;
+    const locked = ncd?.checked || percentageResizeToggle?.checked;
+    if(maxWidthToggle) maxWidthToggle.disabled = locked;
     if(maxWidthToggleLabel){
-      maxWidthToggleLabel.style.color = ncdLocked ? disabledFontColor : '';
-      maxWidthToggleLabel.style.pointerEvents = ncdLocked ? 'none' : '';
+      maxWidthToggleLabel.style.color = locked ? disabledFontColor : '';
+      maxWidthToggleLabel.style.pointerEvents = locked ? 'none' : '';
     }
-    const wLocked = ncdLocked || !maxWidthToggle?.checked;
+    const wLocked = locked || !maxWidthToggle?.checked;
     if(resizeWidth) resizeWidth.disabled = wLocked;
     if(resizeWidthVal){ resizeWidthVal.disabled = wLocked; resizeWidthVal.style.borderColor = wLocked ? '#334155' : '#64748b'; resizeWidthVal.style.color = wLocked ? disabledFontColor : enabledFontColor; }
     if(resizeWidthLabel){ resizeWidthLabel.style.color = wLocked ? disabledFontColor : ''; resizeWidthLabel.style.pointerEvents = wLocked ? 'none' : ''; }
   }
   function syncMaxHeight(){
-    const ncdLocked = ncd?.checked;
-    if(maxHeightToggle) maxHeightToggle.disabled = ncdLocked;
-    if(maxHeightToggleLabel){ maxHeightToggleLabel.style.color = ncdLocked ? disabledFontColor : ''; maxHeightToggleLabel.style.pointerEvents = ncdLocked ? 'none' : ''; }
-    const hLocked = ncdLocked || !maxHeightToggle?.checked;
+    const locked = ncd?.checked || percentageResizeToggle?.checked;
+    if(maxHeightToggle) maxHeightToggle.disabled = locked;
+    if(maxHeightToggleLabel){ maxHeightToggleLabel.style.color = locked ? disabledFontColor : ''; maxHeightToggleLabel.style.pointerEvents = locked ? 'none' : ''; }
+    const hLocked = locked || !maxHeightToggle?.checked;
     if(resizeHeight) resizeHeight.disabled = hLocked;
     if(resizeHeightVal){ resizeHeightVal.disabled = hLocked; resizeHeightVal.style.borderColor = hLocked ? '#334155' : '#64748b'; resizeHeightVal.style.color = hLocked ? disabledFontColor : enabledFontColor; }
     if(resizeHeightLabel){ resizeHeightLabel.style.color = hLocked ? disabledFontColor : ''; resizeHeightLabel.style.pointerEvents = hLocked ? 'none' : ''; }
+  }
+  function syncPercentageResize(){
+    // Mutually exclusive with Max Width/Height Constraint (combining absolute
+    // caps with a proportional percentage scale would be ambiguous about
+    // which wins) — same "No Resize overrides everything" rule as the others.
+    const locked = ncd?.checked || maxWidthToggle?.checked || maxHeightToggle?.checked;
+    if(percentageResizeToggle) percentageResizeToggle.disabled = locked;
+    if(percentageResizeToggleLabel){ percentageResizeToggleLabel.style.color = locked ? disabledFontColor : ''; percentageResizeToggleLabel.style.pointerEvents = locked ? 'none' : ''; }
+    const pLocked = locked || !percentageResizeToggle?.checked;
+    if(percentageResize) percentageResize.disabled = pLocked;
+    if(percentageResizeVal){ percentageResizeVal.disabled = pLocked; percentageResizeVal.style.borderColor = pLocked ? '#334155' : '#64748b'; percentageResizeVal.style.color = pLocked ? disabledFontColor : enabledFontColor; }
+    if(percentageResizeLabel){ percentageResizeLabel.style.color = pLocked ? disabledFontColor : ''; percentageResizeLabel.style.pointerEvents = pLocked ? 'none' : ''; }
   }
   function syncTargetSize(){
     const tsLocked = !targetSizeToggle?.checked;
@@ -147,8 +163,26 @@ export function setupUI(dropzone, fileInput){
   }
   loss.addEventListener('change',sync); mix.addEventListener('change',sync); loop.addEventListener('change',sync); outputFormat?.addEventListener('change', sync); sync();
   ncd?.addEventListener('change', syncNCD); syncNCD();
-  maxWidthToggle?.addEventListener('change', syncMaxWidth); syncMaxWidth();
-  maxHeightToggle?.addEventListener('change', syncMaxHeight); syncMaxHeight();
+  // Mutual exclusion is resolved by clearing the conflicting checkbox(es)
+  // BEFORE syncing display state — reading .checked in the sync* functions
+  // without this would race against whichever toggle was already on,
+  // leaving both sides looking "locked" instead of the one just turned on
+  // actually winning.
+  maxWidthToggle?.addEventListener('change', () => {
+    if(maxWidthToggle.checked && percentageResizeToggle) percentageResizeToggle.checked = false;
+    syncMaxWidth(); syncMaxHeight(); syncPercentageResize();
+  }); syncMaxWidth();
+  maxHeightToggle?.addEventListener('change', () => {
+    if(maxHeightToggle.checked && percentageResizeToggle) percentageResizeToggle.checked = false;
+    syncMaxWidth(); syncMaxHeight(); syncPercentageResize();
+  }); syncMaxHeight();
+  percentageResizeToggle?.addEventListener('change', () => {
+    if(percentageResizeToggle.checked){
+      if(maxWidthToggle) maxWidthToggle.checked = false;
+      if(maxHeightToggle) maxHeightToggle.checked = false;
+    }
+    syncPercentageResize(); syncMaxWidth(); syncMaxHeight();
+  }); syncPercentageResize();
   targetSizeToggle?.addEventListener('change', syncTargetSize); syncTargetSize();
 
   ['dragenter','dragover','dragleave','drop'].forEach(n=>{
